@@ -11,8 +11,8 @@ export class ForumsService {
         return this.forumsRepository.create<Forum>(createForumDto);
     }
 
-    async findAll(options: object): Promise<Forum[]> {
-        return this.forumsRepository.findAll(options);
+    async findAll(options?: object): Promise<Forum[]> {
+        return options !== null ? this.forumsRepository.findAll(options): this.forumsRepository.findAll();
     }
 
     async findOne(options: object): Promise<Forum> {
