@@ -13,7 +13,7 @@ export const databaseProviders = [
 
             // @ts-ignore
             sequelize.addModels([User])
-            await sequelize.sync();
+            await sequelize.sync({force: false});
             return sequelize;
         }
     }
