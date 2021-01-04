@@ -1,5 +1,6 @@
 import {Forum} from './entities/forum.entitiy';
-import {FORUMS_REPOSITORY} from "./forums.constants";
+import {FORUMS_AXIOS_PROVIDER, FORUMS_REPOSITORY} from "./forums.constants";
+import {forumAxios} from "./forums.axios";
 
 export const forumsProviders = [
     {
@@ -7,3 +8,10 @@ export const forumsProviders = [
         useValue: Forum
     }
 ];
+
+export const axiosProvider = [
+    {
+        provide: FORUMS_AXIOS_PROVIDER,
+        useValue: forumAxios
+    }
+]

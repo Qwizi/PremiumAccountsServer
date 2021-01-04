@@ -1,4 +1,4 @@
-import {Controller, Get, Param, Post, UseGuards} from '@nestjs/common';
+import {Controller, Get, HttpException, HttpStatus, Param, Post, UseGuards} from '@nestjs/common';
 import {ForumsService} from "./forums.service";
 import {CreateForumDto} from "./dto/createForumDto";
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
@@ -15,6 +15,8 @@ export class ForumsController {
 
     @Get(':id')
     async findOne(@Param('id') id: number) {
-        return this.forumsService.findOne({where: {id: id}})
+        const forum = await this.forumsService.findOne({where: {id: id}});
+        if (!forum) throw new HttpException('Forum not found', HttpStatus.NOT_FOUND)
+        return forum
     }
 }
