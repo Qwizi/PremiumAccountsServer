@@ -77,8 +77,8 @@ export class ForumsService implements OnModuleInit {
                 let replaceName = name.replace(/&nbsp;/g, "").replace(" ", "");
 
                 // Sprawdzamy czy forum o danej nazwie i id istnieje jezeli nie to tworzymy nowe forum
-                if (!await this.forumsRepository.findOne({where: {tid: value, title: replaceName}})) {
-                    const newForum = await this.forumsRepository.create({tid: value, title: replaceName});
+                if (!await this.forumsRepository.findOne({where: {fid: value, title: replaceName}})) {
+                    const newForum = await this.forumsRepository.create({fid: value, title: replaceName});
                 }
 
                 console.log(replaceName);
