@@ -1,8 +1,7 @@
 import {Inject, Injectable, OnModuleInit} from '@nestjs/common';
-import {FORUMS_AXIOS_PROVIDER, FORUMS_REPOSITORY} from "./forums.constants";
+import {FORUMS_REPOSITORY} from "./forums.constants";
 import {Forum} from "./entities/forum.entitiy";
 import {CreateForumDto} from "./dto/createForumDto";
-import axios from 'axios';
 import {InjectBrowser} from "nest-puppeteer";
 import {Browser} from "puppeteer/lib/cjs/puppeteer/common/Browser";
 
@@ -10,7 +9,6 @@ import {Browser} from "puppeteer/lib/cjs/puppeteer/common/Browser";
 export class ForumsService implements OnModuleInit {
     constructor(
         @Inject(FORUMS_REPOSITORY) private forumsRepository: typeof Forum,
-        @Inject(FORUMS_AXIOS_PROVIDER) private forumsAxios: typeof axios,
         @InjectBrowser() private browser: Browser
     ) {}
 

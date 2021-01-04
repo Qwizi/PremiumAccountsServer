@@ -12,4 +12,9 @@ export class User extends Model<User> {
         defaultValue: true
     })
     is_active: boolean;
+
+    @Column({
+        defaultValue: false
+    })
+    is_admin: boolean;
 }
