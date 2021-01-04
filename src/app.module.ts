@@ -6,6 +6,7 @@ import {UsersModule} from './users/users.module';
 import {AuthModule} from './auth/auth.module';
 import {ConfigModule} from "@nestjs/config";
 import {ForumsModule} from './forums/forums.module';
+import { ThreadsModule } from './threads/threads.module';
 
 @Module({
     imports: [
@@ -13,7 +14,8 @@ import {ForumsModule} from './forums/forums.module';
         DatabaseModule,
         UsersModule,
         AuthModule,
-        ForumsModule
+        ForumsModule,
+        ThreadsModule
     ],
     controllers: [AppController],
     providers: [AppService],

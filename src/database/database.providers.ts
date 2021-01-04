@@ -2,6 +2,7 @@ import {Sequelize} from "sequelize-typescript";
 import {SEQUELIZE} from "./database.contants";
 import {User} from "../users/entities/user.enitiy";
 import {Forum} from "../forums/entities/forum.entitiy";
+import {Thread} from "../threads/entities/thread.entity";
 
 export const databaseProviders = [
     {
@@ -13,7 +14,7 @@ export const databaseProviders = [
             })
 
             // @ts-ignore
-            sequelize.addModels([User, Forum])
+            sequelize.addModels([User, Forum, Thread])
             await sequelize.sync({force: false});
             return sequelize;
         }
