@@ -1,7 +1,7 @@
 import {Controller, Get, HttpException, HttpStatus, Param, Post, UseGuards} from '@nestjs/common';
 import {ForumsService} from "./forums.service";
-import {CreateForumDto} from "./dto/createForumDto";
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
+import {Thread} from "../threads/entities/thread.entity";
 
 @UseGuards(JwtAuthGuard)
 @Controller('forums')
@@ -10,7 +10,12 @@ export class ForumsController {
 
     @Get()
     async findAll() {
-        return this.forumsService.findAll()
+        return this.forumsService.findAll({include: [Thread]})
+    }
+
+    @Post("sync")
+    async syncForums() {
+        return this.forumsService.sync()
     }
 
     @Get(':id')

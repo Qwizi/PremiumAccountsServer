@@ -1,5 +1,5 @@
-import {Inject, Injectable, OnModuleInit} from '@nestjs/common';
-import {FORUMS_REPOSITORY} from "./forums.constants";
+import {HttpService, HttpStatus, Inject, Injectable, OnModuleInit} from '@nestjs/common';
+import {EPREMKI_RSS_URL, FORUMS_REPOSITORY, MYBB_COOKIE_OBJ} from "./forums.constants";
 import {Forum} from "./entities/forum.entitiy";
 import {CreateForumDto} from "./dto/createForumDto";
 import {InjectBrowser} from "nest-puppeteer";
@@ -13,7 +13,8 @@ export class ForumsService implements OnModuleInit {
     ) {}
 
     async onModuleInit() {
-        await this.syncForums();
+        //await this.syncForums();
+        //await this.syncThreads()
     }
 
     async create(createForumDto: CreateForumDto): Promise<Forum> {
@@ -37,21 +38,11 @@ export class ForumsService implements OnModuleInit {
         return forum.destroy();
     }
 
-    sleep (time) {
-        return new Promise((resolve) => setTimeout(resolve, time));
-    }
+    async sync() {
 
-    async syncForums() {
-        const EPREMKI_RSS_URL = 'https://epremki.com/misc.php?action=syndication'
-        const cookie = {
-            'name': 'mybbuser',
-            'value': process.env.MYBB_COOKIE,
-            'domain': 'epremki.com',
-            'path': '/'
-        }
         // Tworzymy nowa strone
         const page = await this.browser.newPage()
-        await page.setCookie(cookie);
+        await page.setCookie(MYBB_COOKIE_OBJ);
         // Przechodzimy na adres syndication
         await page.goto(EPREMKI_RSS_URL);
 

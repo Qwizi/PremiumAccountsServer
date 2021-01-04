@@ -1,11 +1,16 @@
-import {Inject, Injectable} from '@nestjs/common';
+import {HttpService, Inject, Injectable} from '@nestjs/common';
 import {THREADS_REPOSITORY} from "./threads.constants";
 import {Thread} from "./entities/thread.entity";
 import {CreateThreadDto} from "./dto/createThreadDto";
+import {ForumsService} from "../forums/forums.service";
 
 @Injectable()
 export class ThreadsService {
-    constructor(@Inject(THREADS_REPOSITORY) private threadsRepository: typeof Thread) {}
+    constructor(
+        @Inject(THREADS_REPOSITORY) private threadsRepository: typeof Thread,
+        private forumsService: ForumsService,
+        private httpService: HttpService
+    ) {}
 
     async create(createThreadDto: CreateThreadDto): Promise<Thread> {
         return this.threadsRepository.create(createThreadDto);
@@ -13,6 +18,10 @@ export class ThreadsService {
 
     async findAll(options?: object): Promise<Thread[]> {
         return options !== null ? this.threadsRepository.findAll(options) : this.threadsRepository.findAll();
+    }
+
+    async findOrCreate(options: any ): Promise<any> {
+        return this.threadsRepository.findOrCreate(options)
     }
 
     async findOne(options: object): Promise<Thread> {
@@ -36,4 +45,37 @@ export class ThreadsService {
         await thread.decrement('not_work_count', {by: 1})
     }
 
+    async sync(limit: number = 15) {
+        const forums = await this.forumsService.findAll();
+        for (let forum of forums) {
+            try {
+                const response = await this.httpService.get(`
+https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, {
+                    headers: {
+                        Cookie: `mybbuser=${process.env.MYBB_COOKIE};`
+                    }
+                }).toPromise()
+                console.log(response.data.items);
+                for (let threadItem of response.data.items) {
+                    const [thread, threadCreated] = await this.threadsRepository.findOrCreate({where: {
+                            tid: threadItem.id
+                        },
+                        defaults: {
+                            url: threadItem.url,
+                            title: threadItem.title,
+                            content_html: threadItem.content_html,
+                            createdAt: threadItem.date_published,
+                            updatedAt: threadItem.date_modified
+                        }
+                    })
+                    if (threadCreated) {
+                        forum.$add('threads', thread);
+                    }
+                }
+            }
+            catch (e) {
+                console.log(e);
+            }
+        }
+    }
 }
