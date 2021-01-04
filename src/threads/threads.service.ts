@@ -55,21 +55,23 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                         Cookie: `mybbuser=${process.env.MYBB_COOKIE};`
                     }
                 }).toPromise()
-                console.log(response.data.items);
-                for (let threadItem of response.data.items) {
-                    const [thread, threadCreated] = await this.threadsRepository.findOrCreate({where: {
-                            tid: threadItem.id
-                        },
-                        defaults: {
-                            url: threadItem.url,
-                            title: threadItem.title,
-                            content_html: threadItem.content_html,
-                            createdAt: threadItem.date_published,
-                            updatedAt: threadItem.date_modified
+                if (response.data.items.length > 0) {
+                    for (let threadItem of response.data.items) {
+                        const content_html = threadItem.content_html.replace(/<[^>]*>?/gm, "").replace(/Odkryta zawartość:/gm, "");
+                        const [thread, threadCreated] = await this.threadsRepository.findOrCreate({where: {
+                                tid: threadItem.id
+                            },
+                            defaults: {
+                                url: threadItem.url,
+                                title: threadItem.title,
+                                content_html: content_html,
+                                createdAt: threadItem.date_published,
+                                updatedAt: threadItem.date_modified
+                            }
+                        })
+                        if (threadCreated) {
+                            forum.$add('threads', thread);
                         }
-                    })
-                    if (threadCreated) {
-                        forum.$add('threads', thread);
                     }
                 }
             }
