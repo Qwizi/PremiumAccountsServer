@@ -14,6 +14,7 @@ import {ForumsService} from "../forums/forums.service";
 import {ThreadNotWork} from "./entities/threadNotWork";
 import {User} from "../users/entities/user.enitiy";
 import {ThreadFavorite} from "./entities/threadFavorite";
+import {Cron, CronExpression} from "@nestjs/schedule";
 
 @Injectable()
 export class ThreadsService {
@@ -138,5 +139,10 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                 console.log(e);
             }
         }
+    }
+
+    @Cron(CronExpression.EVERY_2ND_HOUR)
+    async syncThreadsCron() {
+        await this.sync();
     }
 }
