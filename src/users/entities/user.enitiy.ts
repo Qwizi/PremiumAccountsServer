@@ -1,4 +1,6 @@
-import {Table, Column, Model} from "sequelize-typescript";
+import {Table, Column, Model, BelongsToMany} from "sequelize-typescript";
+import {Thread} from "../../threads/entities/thread.entity";
+import {ThreadFavorite} from "../../threads/entities/threadFavorite";
 
 @Table
 export class User extends Model<User> {
@@ -17,4 +19,7 @@ export class User extends Model<User> {
         defaultValue: false
     })
     is_admin: boolean;
+
+    @BelongsToMany(() => Thread, () => ThreadFavorite)
+    favorite_threads: Thread[]
 }

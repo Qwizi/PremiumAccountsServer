@@ -1,6 +1,8 @@
-import {Column, ForeignKey, HasMany, Model, Table} from "sequelize-typescript";
+import {BelongsToMany, Column, ForeignKey, HasMany, Model, Table} from "sequelize-typescript";
 import {Forum} from "../../forums/entities/forum.entitiy";
 import {ThreadNotWork} from "./threadNotWork";
+import {User} from "../../users/entities/user.enitiy";
+import {ThreadFavorite} from "./threadFavorite";
 
 @Table
 export class Thread extends Model<Thread> {
@@ -26,4 +28,7 @@ export class Thread extends Model<Thread> {
         defaultValue: true
     })
     is_visible: boolean;
+
+    @BelongsToMany(() => User, () => ThreadFavorite)
+    users: User[]
 }

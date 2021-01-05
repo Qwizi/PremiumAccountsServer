@@ -14,6 +14,7 @@ import {ThreadsService} from "./threads.service";
 import {SearchThreadDto} from "./dto/searchThreadDto";
 import {Op} from 'sequelize';
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
+import {ThreadNotWork} from "./entities/threadNotWork";
 
 @UseGuards(JwtAuthGuard)
 @Controller('threads')
@@ -23,7 +24,7 @@ export class ThreadsController {
 
     @Get(":id")
     async findOne(@Param('id') id: number) {
-        const thread = await this.threadsService.findOne({where: {id: id}});
+        const thread = await this.threadsService.findOne({where: {id: id}, include: [ThreadNotWork]});
         if (!thread) throw new NotFoundException();
         return thread;
     }
@@ -46,6 +47,24 @@ export class ThreadsController {
         return {message: 'Successfully remove thread not work'}
     }
 
+    @Post(":id/favorite")
+    async addToFavorite(@Param('id') id: number, @Request() req) {
+        const thread = await this.threadsService.findOne({where: {id: id}});
+        if (!thread) throw new NotFoundException();
+
+        await this.threadsService.addThreadToFavorite(thread, req.user);
+        return {message: 'Successfully add thread to favorites'}
+    }
+
+    @Delete(':id/favorite')
+    async removeFromFavorite(@Param('id') id: number, @Request() req) {
+        const thread = await this.threadsService.findOne({where: {id: id}});
+        if (!thread) throw new NotFoundException();
+
+        await this.threadsService.removeThreadFromFavorite(thread, req.user);
+        return {message: 'Successfully removed thread from favorites'}
+    }
+
     @Post('sync')
     async sync() {
         return this.threadsService.sync();
@@ -65,7 +84,8 @@ export class ThreadsController {
             },
             order: [
                 ['updatedAt', 'DESC']
-            ]
+            ],
+            include: [ThreadNotWork]
         })
         if (!threads) throw new HttpException('Thread not found', HttpStatus.NOT_FOUND)
         return threads;

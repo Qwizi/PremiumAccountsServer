@@ -1,18 +1,29 @@
-import {HttpException, HttpService, HttpStatus, Inject, Injectable, NotFoundException} from '@nestjs/common';
-import {THREADS_NOT_WORK_REPOSITORY, THREADS_REPOSITORY} from "./threads.constants";
+import {
+    BadRequestException,
+    HttpException,
+    HttpService,
+    HttpStatus,
+    Inject,
+    Injectable,
+    NotFoundException
+} from '@nestjs/common';
+import {THREADS_FAVORITE_REPOSITORY, THREADS_NOT_WORK_REPOSITORY, THREADS_REPOSITORY} from "./threads.constants";
 import {Thread} from "./entities/thread.entity";
 import {CreateThreadDto} from "./dto/createThreadDto";
 import {ForumsService} from "../forums/forums.service";
 import {ThreadNotWork} from "./entities/threadNotWork";
 import {User} from "../users/entities/user.enitiy";
+import {ThreadFavorite} from "./entities/threadFavorite";
 
 @Injectable()
 export class ThreadsService {
     constructor(
         @Inject(THREADS_REPOSITORY) private threadsRepository: typeof Thread,
+        @Inject(THREADS_NOT_WORK_REPOSITORY) private threadsNotWorkRepository: typeof ThreadNotWork,
+        @Inject(THREADS_FAVORITE_REPOSITORY) private threadsFavoriteRepository: typeof ThreadFavorite,
         private forumsService: ForumsService,
         private httpService: HttpService,
-        @Inject(THREADS_NOT_WORK_REPOSITORY) private threadsNotWorkRepository: typeof ThreadNotWork
+
     ) {
     }
 
@@ -67,7 +78,33 @@ export class ThreadsService {
         threadNotWork.destroy()
     }
 
-    async sync(limit: number = 15) {
+    async addThreadToFavorite(thread: Thread, user: User) {
+        const [threadFavorite, threadFavoriteCreated] = await this.threadsFavoriteRepository.findOrCreate({
+            where: {
+                threadId: thread.id,
+                userId: user.id
+            }
+        })
+        if (threadFavoriteCreated) {
+            user.$add('favorite_threads', thread)
+        } else {
+            throw new BadRequestException('U have already add this thread to favorites')
+        }
+    }
+
+    async removeThreadFromFavorite(thread: Thread, user: User) {
+        const threadFavorite = await this.threadsFavoriteRepository.findOne({
+            where: {
+                threadId: thread.id,
+                userId: user.id
+            }
+        })
+        if (!threadFavorite) throw new NotFoundException();
+        user.$remove('favorite_threads', thread)
+        threadFavorite.destroy()
+    }
+
+    async sync(limit: number = 40) {
         const forums = await this.forumsService.findAll();
         for (let forum of forums) {
             try {

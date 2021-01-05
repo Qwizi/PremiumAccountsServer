@@ -4,6 +4,7 @@ import {User} from "../users/entities/user.enitiy";
 import {Forum} from "../forums/entities/forum.entitiy";
 import {Thread} from "../threads/entities/thread.entity";
 import {ThreadNotWork} from "../threads/entities/threadNotWork";
+import {ThreadFavorite} from "../threads/entities/threadFavorite";
 
 export const databaseProviders = [
     {
@@ -20,7 +21,8 @@ export const databaseProviders = [
                 User,
                 Forum,
                 Thread,
-                ThreadNotWork
+                ThreadNotWork,
+                ThreadFavorite
             ])
             await sequelize.sync({force: false});
             return sequelize;
