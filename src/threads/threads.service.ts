@@ -141,7 +141,7 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
         }
     }
 
-    @Cron(CronExpression.EVERY_2ND_HOUR)
+    @Cron(CronExpression.EVERY_2_HOURS)
     async syncThreadsCron() {
         await this.sync();
     }
