@@ -1,5 +1,5 @@
 import {HttpModule, Module} from '@nestjs/common';
-import {threadsProviders} from "./threads.providers";
+import {threadsNotWorkProviders, threadsProviders} from "./threads.providers";
 import { ThreadsService } from './threads.service';
 import {ForumsModule} from "../forums/forums.module";
 import { ThreadsController } from './threads.controller';
@@ -11,7 +11,7 @@ import {ConfigModule} from "@nestjs/config";
         HttpModule,
         ForumsModule
     ],
-    providers: [ThreadsService, ...threadsProviders, ],
+    providers: [ThreadsService, ...threadsProviders, ...threadsNotWorkProviders],
     exports: [ThreadsService],
     controllers: [ThreadsController]
 })

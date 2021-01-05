@@ -1,16 +1,20 @@
-import {HttpService, Inject, Injectable} from '@nestjs/common';
-import {THREADS_REPOSITORY} from "./threads.constants";
+import {HttpException, HttpService, HttpStatus, Inject, Injectable, NotFoundException} from '@nestjs/common';
+import {THREADS_NOT_WORK_REPOSITORY, THREADS_REPOSITORY} from "./threads.constants";
 import {Thread} from "./entities/thread.entity";
 import {CreateThreadDto} from "./dto/createThreadDto";
 import {ForumsService} from "../forums/forums.service";
+import {ThreadNotWork} from "./entities/threadNotWork";
+import {User} from "../users/entities/user.enitiy";
 
 @Injectable()
 export class ThreadsService {
     constructor(
         @Inject(THREADS_REPOSITORY) private threadsRepository: typeof Thread,
         private forumsService: ForumsService,
-        private httpService: HttpService
-    ) {}
+        private httpService: HttpService,
+        @Inject(THREADS_NOT_WORK_REPOSITORY) private threadsNotWorkRepository: typeof ThreadNotWork
+    ) {
+    }
 
     async create(createThreadDto: CreateThreadDto): Promise<Thread> {
         return this.threadsRepository.create(createThreadDto);
@@ -20,7 +24,7 @@ export class ThreadsService {
         return options !== null ? this.threadsRepository.findAll(options) : this.threadsRepository.findAll();
     }
 
-    async findOrCreate(options: any ): Promise<any> {
+    async findOrCreate(options: any): Promise<any> {
         return this.threadsRepository.findOrCreate(options)
     }
 
@@ -37,12 +41,30 @@ export class ThreadsService {
         return thread.destroy()
     }
 
-    async incrementNotWork(thread: Thread) {
-        await thread.increment('not_work_count', {by: 1})
+    async setThreadNotWork(thread: Thread, user: User) {
+        const [threadNotWork, threadNotWorkCreated] = await this.threadsNotWorkRepository.findOrCreate({
+            where: {
+                threadId: thread.id,
+                userId: user.id
+            }
+        })
+        if (threadNotWorkCreated) {
+            await thread.$add('not_works', threadNotWork);
+        } else {
+            throw new HttpException('U have already set this thread not work', HttpStatus.BAD_REQUEST)
+        }
     }
 
-    async decrementNotWork(thread: Thread) {
-        await thread.decrement('not_work_count', {by: 1})
+    async removeThreadNotWork(thread: Thread, user: User) {
+        const threadNotWork = await this.threadsNotWorkRepository.findOne({
+            where: {
+                threadId: thread.id,
+                userId: user.id
+            }
+        })
+        if (!threadNotWork) throw new NotFoundException();
+        thread.$remove('not_works', threadNotWork);
+        threadNotWork.destroy()
     }
 
     async sync(limit: number = 15) {
@@ -58,7 +80,8 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                 if (response.data.items.length > 0) {
                     for (let threadItem of response.data.items) {
                         const content_html = threadItem.content_html.replace(/<[^>]*>?/gm, "").replace(/Odkryta zawartość:/gm, "");
-                        const [thread, threadCreated] = await this.threadsRepository.findOrCreate({where: {
+                        const [thread, threadCreated] = await this.threadsRepository.findOrCreate({
+                            where: {
                                 tid: threadItem.id
                             },
                             defaults: {
@@ -74,8 +97,7 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                         }
                     }
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.log(e);
             }
         }

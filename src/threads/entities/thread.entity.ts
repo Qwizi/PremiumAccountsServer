@@ -1,5 +1,6 @@
-import {Column, ForeignKey, Model, Table} from "sequelize-typescript";
+import {Column, ForeignKey, HasMany, Model, Table} from "sequelize-typescript";
 import {Forum} from "../../forums/entities/forum.entitiy";
+import {ThreadNotWork} from "./threadNotWork";
 
 @Table
 export class Thread extends Model<Thread> {
@@ -15,12 +16,14 @@ export class Thread extends Model<Thread> {
     @Column
     content_html: string;
 
-    @Column({
-        defaultValue: 0
-    })
-    not_work_count: number;
+    @HasMany(() => ThreadNotWork)
+    not_works: ThreadNotWork[]
 
     @ForeignKey(() => Forum)
-    @Column
     forumId: number;
+
+    @Column({
+        defaultValue: true
+    })
+    is_visible: boolean;
 }

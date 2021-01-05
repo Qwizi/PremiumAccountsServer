@@ -3,6 +3,7 @@ import {SEQUELIZE} from "./database.contants";
 import {User} from "../users/entities/user.enitiy";
 import {Forum} from "../forums/entities/forum.entitiy";
 import {Thread} from "../threads/entities/thread.entity";
+import {ThreadNotWork} from "../threads/entities/threadNotWork";
 
 export const databaseProviders = [
     {
@@ -15,7 +16,12 @@ export const databaseProviders = [
             })
 
             // @ts-ignore
-            sequelize.addModels([User, Forum, Thread])
+            sequelize.addModels([
+                User,
+                Forum,
+                Thread,
+                ThreadNotWork
+            ])
             await sequelize.sync({force: false});
             return sequelize;
         }
