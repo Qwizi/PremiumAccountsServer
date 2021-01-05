@@ -53,4 +53,8 @@ export class UsersService {
             password: hashedPassword
         })
     }
+
+    async getFavoritesThreads(user: User) {
+        return user.$get('favorite_threads')
+    }
 }
