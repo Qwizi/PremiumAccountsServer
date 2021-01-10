@@ -2,11 +2,14 @@ import {HttpService, HttpStatus, Inject, Injectable, OnModuleInit} from '@nestjs
 import {EPREMKI_RSS_URL, FORUMS_REPOSITORY, MYBB_COOKIE_OBJ} from "./forums.constants";
 import {Forum} from "./entities/forum.entitiy";
 import {CreateForumDto} from "./dto/createForumDto";
+import * as cheerio from 'cheerio';
+import * as pIteration from 'p-iteration';
 
 @Injectable()
 export class ForumsService implements OnModuleInit {
     constructor(
         @Inject(FORUMS_REPOSITORY) private forumsRepository: typeof Forum,
+        private httpService: HttpService,
     ) {}
 
     async onModuleInit() {
@@ -35,10 +38,42 @@ export class ForumsService implements OnModuleInit {
         return forum.destroy();
     }
 
-    /*async sync() {
+    async sync() {
+        try {
+            const response = await this.httpService.get('https://epremki.com/misc.php?action=syndication', {
+                headers: {
+                    Cookie: `mybbuser=${process.env.MYBB_COOKIE};`
+                }
+            }).toPromise()
+            const htmlData = response.data;
+            const $ = cheerio.load(htmlData);
 
+            let forumItems = []
+            const ignoreForums = await this.getIgnoreForums();
+
+            $("select[name='forums[]'] option").each(function(i, op) {
+                // @ts-ignore
+                const name = $(op).text();
+                const value = $(op).val();
+                if (!ignoreForums.includes(value)) {
+                    const replacedName = name.replace(/\s/g, '');
+                    const forum = {
+                        title: replacedName,
+                        fid: value
+                    }
+                    forumItems.push(forum);
+                }
+            });
+            for (let forum of forumItems) {
+                if (!await this.forumsRepository.findOne({where: {fid: forum.fid, title: forum.title}})) {
+                    const newForum = await this.forumsRepository.create({fid: forum.fid, title: forum.title});
+                }
+            }
+        } catch (e) {
+            console.log(e)
+        }
         // Tworzymy nowa strone
-        const page = await this.browser.newPage()
+        /*const page = await this.browser.newPage()
         await page.setCookie(MYBB_COOKIE_OBJ);
         // Przechodzimy na adres syndication
         await page.goto(EPREMKI_RSS_URL);
@@ -77,7 +112,8 @@ export class ForumsService implements OnModuleInit {
         await page.close();
         // Zamykamy przegladarke
         await this.browser.close();
-    }*/
+        */
+    }
     async getIgnoreForums() {
         return [
             'all',
@@ -148,7 +184,8 @@ export class ForumsService implements OnModuleInit {
             '60',
             '61',
             '81',
-            '102'
+            '102',
+            '189'
         ]
     }
 
