@@ -34,7 +34,6 @@
     "class-validator": "^0.12.2",
     "mysql2": "^2.2.5",
     "nest-puppeteer": "^1.1.1",
-    "nestjs-sequelize-paginate": "^1.0.0",
     "passport": "^0.4.1",
     "passport-jwt": "^4.0.0",
     "passport-local": "^1.0.0",
