@@ -2,14 +2,11 @@ import {HttpService, HttpStatus, Inject, Injectable, OnModuleInit} from '@nestjs
 import {EPREMKI_RSS_URL, FORUMS_REPOSITORY, MYBB_COOKIE_OBJ} from "./forums.constants";
 import {Forum} from "./entities/forum.entitiy";
 import {CreateForumDto} from "./dto/createForumDto";
-import {InjectBrowser} from "nest-puppeteer";
-import {Browser} from "puppeteer/lib/cjs/puppeteer/common/Browser";
 
 @Injectable()
 export class ForumsService implements OnModuleInit {
     constructor(
         @Inject(FORUMS_REPOSITORY) private forumsRepository: typeof Forum,
-        @InjectBrowser() private browser: Browser
     ) {}
 
     async onModuleInit() {
@@ -38,7 +35,7 @@ export class ForumsService implements OnModuleInit {
         return forum.destroy();
     }
 
-    async sync() {
+    /*async sync() {
 
         // Tworzymy nowa strone
         const page = await this.browser.newPage()
@@ -80,7 +77,7 @@ export class ForumsService implements OnModuleInit {
         await page.close();
         // Zamykamy przegladarke
         await this.browser.close();
-    }
+    }*/
     async getIgnoreForums() {
         return [
             'all',
