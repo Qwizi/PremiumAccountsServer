@@ -67,7 +67,7 @@ export class ThreadsController {
 
     @Post('sync')
     async sync() {
-        return this.threadsService.sync();
+        return this.threadsService.addThreadsSyncToQueue();
     }
 
     @Post('search')

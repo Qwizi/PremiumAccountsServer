@@ -15,6 +15,8 @@ import {ThreadNotWork} from "./entities/threadNotWork";
 import {User} from "../users/entities/user.enitiy";
 import {ThreadFavorite} from "./entities/threadFavorite";
 import {Cron, CronExpression} from "@nestjs/schedule";
+import {InjectQueue} from "@nestjs/bull";
+import {Queue} from "bull";
 
 @Injectable()
 export class ThreadsService {
@@ -22,9 +24,9 @@ export class ThreadsService {
         @Inject(THREADS_REPOSITORY) private threadsRepository: typeof Thread,
         @Inject(THREADS_NOT_WORK_REPOSITORY) private threadsNotWorkRepository: typeof ThreadNotWork,
         @Inject(THREADS_FAVORITE_REPOSITORY) private threadsFavoriteRepository: typeof ThreadFavorite,
+        @InjectQueue('threads') private threadsQueue: Queue,
         private forumsService: ForumsService,
         private httpService: HttpService,
-
     ) {
     }
 
@@ -105,6 +107,13 @@ export class ThreadsService {
         threadFavorite.destroy()
     }
 
+    async addThreadsSyncToQueue(limit: number = 40) {
+        await this.threadsQueue.add({
+            limit: limit
+        })
+    }
+
+
     async sync(limit: number = 40) {
         const forums = await this.forumsService.findAll();
         for (let forum of forums) {
@@ -143,6 +152,6 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
 
     @Cron(CronExpression.EVERY_2_HOURS)
     async syncThreadsCron() {
-        await this.sync();
+        await this.addThreadsSyncToQueue();
     }
 }
