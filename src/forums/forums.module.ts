@@ -10,7 +10,10 @@ import {ConfigModule} from "@nestjs/config";
     imports: [
         ConfigModule.forRoot(),
         AuthModule,
-        PuppeteerModule.forRoot({headless: true}),
+        PuppeteerModule.forRoot({
+            headless: true,
+            args: ['--no-sandbox']
+        }),
         HttpModule
     ],
     providers: [ForumsService, ...forumsProviders],
