@@ -10,7 +10,7 @@ export class ForumsController {
 
     @Get()
     async findAll() {
-        return this.forumsService.findAll({include: [Thread]})
+        return this.forumsService.findAll()
     }
 
     @Post("sync")
