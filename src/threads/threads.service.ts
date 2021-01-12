@@ -1,13 +1,7 @@
 import {
-    BadRequestException,
-    HttpException,
     HttpService,
-    HttpStatus,
-    Inject,
     Injectable,
-    NotFoundException
 } from '@nestjs/common';
-import {THREADS_FAVORITE_REPOSITORY, THREADS_NOT_WORK_REPOSITORY, THREADS_REPOSITORY} from "./threads.constants";
 import {Thread} from "./entities/thread.entity";
 import {CreateThreadDto} from "./dto/createThreadDto";
 import {ForumsService} from "../forums/forums.service";

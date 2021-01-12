@@ -2,8 +2,6 @@ import {
     Body,
     Controller, Delete,
     Get, HttpCode,
-    HttpException,
-    HttpStatus,
     NotFoundException,
     Param,
     Post,
@@ -12,7 +10,6 @@ import {
 } from '@nestjs/common';
 import {ThreadsService} from "./threads.service";
 import {SearchThreadDto} from "./dto/searchThreadDto";
-import {Op} from 'sequelize';
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
 //import {ThreadNotWork} from "./entities/threadNotWork";
 
@@ -74,7 +71,7 @@ export class ThreadsController {
     @Post('search')
     @HttpCode(200)
     async search(@Body() searchThreadDto: SearchThreadDto) {
-        const threads = await this.threadsService.findAll({
+        /*const threads = await this.threadsService.findAll({
             where: {
                 title: {
                     [Op.substring]: searchThreadDto.name
@@ -88,6 +85,6 @@ export class ThreadsController {
             ]
         })
         if (!threads) throw new HttpException('Thread not found', HttpStatus.NOT_FOUND)
-        return threads;
+        return threads;*/
     }
 }

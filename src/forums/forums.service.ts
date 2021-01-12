@@ -1,9 +1,8 @@
 import {HttpService, HttpStatus, Inject, Injectable, OnModuleInit} from '@nestjs/common';
-import {EPREMKI_RSS_URL, FORUMS_REPOSITORY, MYBB_COOKIE_OBJ} from "./forums.constants";
+import {EPREMKI_RSS_URL, MYBB_COOKIE_OBJ} from "./forums.constants";
 import {Forum} from "./entities/forum.entitiy";
 import {CreateForumDto} from "./dto/createForumDto";
 import * as cheerio from 'cheerio';
-import * as pIteration from 'p-iteration';
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 
