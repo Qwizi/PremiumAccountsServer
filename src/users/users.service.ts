@@ -1,17 +1,19 @@
-import {HttpException, HttpStatus, Inject, Injectable} from '@nestjs/common';
-import {MESSAGES, USERS_REPOSITORY} from "./users.constants";
+import {HttpException, HttpStatus, Injectable} from '@nestjs/common';
+import {MESSAGES} from "./users.constants";
 import {User} from './entities/user.enitiy';
 import * as bcrypt from 'bcrypt';
 import {CreateUserDto} from "./dto/createUserDto";
 import {UpdateUserDto} from "./dto/updateUserDto";
 import {RegisterUserDto} from "./dto/registerUserDto";
+import {InjectRepository} from "@nestjs/typeorm";
+import {Repository} from "typeorm";
 
 @Injectable()
 export class UsersService {
-    constructor(@Inject(USERS_REPOSITORY) private usersRepository: typeof User) {}
+    constructor(@InjectRepository(User) private usersRepository: Repository<User>) {}
 
     async create(createUserDto: CreateUserDto) {
-        return this.usersRepository.create<User>(createUserDto);
+        return this.usersRepository.create(createUserDto);
     }
 
     async findOne(options: object): Promise<User> {
@@ -19,28 +21,34 @@ export class UsersService {
     }
 
     async findAll(options: object): Promise<User[]> {
-        return this.usersRepository.findAll(options)
+        return this.usersRepository.find(options)
     }
 
     async update(user: User, updateUserDto: UpdateUserDto) {
-        await user.update(updateUserDto);
+        if (updateUserDto.username) user.username = updateUserDto.username
+        if (updateUserDto.password) user.password = updateUserDto.password
+        if (updateUserDto.is_active) user.is_active = updateUserDto.is_active
+        if (updateUserDto.is_admin) user.is_admin = updateUserDto.is_admin
+        return this.usersRepository.save(user);
     }
 
-    async destroy(user: User) {
-        user.destroy();
+    async delete(user: User) {
+        return this.usersRepository.delete(user.id);
     }
 
     async activate(user: User) {
-        await user.update({is_active: true})
+        user.is_active = true;
+        return this.usersRepository.save(user);
     }
 
     async deactivate(user: User) {
-        await user.update({is_active: false})
+        user.is_active = false;
+        return this.usersRepository.save(user);
     }
 
     async register(registerUserDto: RegisterUserDto): Promise<User> {
         const {username} = registerUserDto;
-        const user = await this.findOne({where: {username: username}})
+        const user = await this.usersRepository.findOne({where: {username: username}})
         if (user) {
             throw new HttpException(
                 MESSAGES.USERS_EXISTS,
@@ -48,13 +56,13 @@ export class UsersService {
             )
         }
         const hashedPassword = await bcrypt.hash(registerUserDto.password, 10)
-        return this.usersRepository.create<User>({
+        return this.usersRepository.create({
             username: username,
             password: hashedPassword
         })
     }
 
     async getFavoritesThreads(user: User) {
-        return user.$get('favorite_threads')
+        //return user.favorite_threads
     }
 }
