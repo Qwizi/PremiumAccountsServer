@@ -1,6 +1,13 @@
-import {Column, Entity, ManyToMany, PrimaryGeneratedColumn} from "typeorm";
-import {Forum} from "../../forums/entities/forum.entitiy";
-import {JoinTable} from "typeorm/browser";
+import {
+    Column,
+    CreateDateColumn,
+    Entity,
+    ManyToMany,
+    OneToMany,
+    PrimaryGeneratedColumn,
+    UpdateDateColumn
+} from "typeorm";
+import {Thread} from "../../threads/entities/thread.entity";
 
 @Entity()
 export class User {
@@ -22,6 +29,18 @@ export class User {
         default: false
     })
     is_admin: boolean;
+
+    @CreateDateColumn()
+    public created_at: Date;
+
+    @UpdateDateColumn()
+    public updated_at: Date;
+
+    @OneToMany(() => Thread, (thread: Thread) => thread.favorites)
+    favorite_threads: Promise<Thread[]>
+
+    @OneToMany(() => Thread, (thread: Thread) => thread.not_works)
+    not_works: Promise<Thread[]>
 
     /*
     @ManyToMany(() => Thread, (thread: Thread) => thread.user_favorites)

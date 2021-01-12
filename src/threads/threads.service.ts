@@ -11,19 +11,22 @@ import {THREADS_FAVORITE_REPOSITORY, THREADS_NOT_WORK_REPOSITORY, THREADS_REPOSI
 import {Thread} from "./entities/thread.entity";
 import {CreateThreadDto} from "./dto/createThreadDto";
 import {ForumsService} from "../forums/forums.service";
-import {ThreadNotWork} from "./entities/threadNotWork";
+// import {ThreadNotWork} from "./entities/threadNotWork";
 import {User} from "../users/entities/user.enitiy";
-import {ThreadFavorite} from "./entities/threadFavorite";
+// import {ThreadFavorite} from "./entities/threadFavorite";
 import {Cron, CronExpression} from "@nestjs/schedule";
 import {InjectQueue} from "@nestjs/bull";
 import {Queue} from "bull";
+import {InjectRepository} from "@nestjs/typeorm";
+import {Repository} from "typeorm";
+import {Forum} from "../forums/entities/forum.entitiy";
 
 @Injectable()
 export class ThreadsService {
     constructor(
-        @Inject(THREADS_REPOSITORY) private threadsRepository: typeof Thread,
-        @Inject(THREADS_NOT_WORK_REPOSITORY) private threadsNotWorkRepository: typeof ThreadNotWork,
-        @Inject(THREADS_FAVORITE_REPOSITORY) private threadsFavoriteRepository: typeof ThreadFavorite,
+        @InjectRepository(Thread) private threadsRepository: Repository<Thread>,
+        // @Inject(THREADS_NOT_WORK_REPOSITORY) private threadsNotWorkRepository: typeof ThreadNotWork,
+        // @Inject(THREADS_FAVORITE_REPOSITORY) private threadsFavoriteRepository: typeof ThreadFavorite,
         @InjectQueue('threads') private threadsQueue: Queue,
         private forumsService: ForumsService,
         private httpService: HttpService,
@@ -31,32 +34,35 @@ export class ThreadsService {
     }
 
     async create(createThreadDto: CreateThreadDto): Promise<Thread> {
-        return this.threadsRepository.create(createThreadDto);
+        const thread = await this.threadsRepository.create(createThreadDto);
+        await this.threadsRepository.save(thread);
+        return thread
     }
 
     async findAll(options?: object): Promise<Thread[]> {
-        return options !== null ? this.threadsRepository.findAll(options) : this.threadsRepository.findAll();
+        return options !== null ? this.threadsRepository.find(options) : this.threadsRepository.find();
     }
 
-    async findOrCreate(options: any): Promise<any> {
-        return this.threadsRepository.findOrCreate(options)
-    }
 
     async findOne(options: object): Promise<Thread> {
         return this.threadsRepository.findOne(options);
     }
 
     async update(thread: Thread, createThreadDto: CreateThreadDto): Promise<Thread> {
-        await thread.update(createThreadDto)
-        return thread;
+        if (createThreadDto.tid) thread.tid = createThreadDto.tid;
+        if (createThreadDto.title) thread.title = createThreadDto.title;
+        if (createThreadDto.url) thread.url = createThreadDto.url;
+        if (createThreadDto.content_html) thread.content_html = createThreadDto.content_html;
+
+        return this.threadsRepository.save(thread);
     }
 
-    async remove(thread: Thread): Promise<any> {
-        return thread.destroy()
+    async delete(thread: Thread): Promise<any> {
+        return this.threadsRepository.delete(thread.id);
     }
 
     async setThreadNotWork(thread: Thread, user: User) {
-        const [threadNotWork, threadNotWorkCreated] = await this.threadsNotWorkRepository.findOrCreate({
+        /*const [threadNotWork, threadNotWorkCreated] = await this.threadsNotWorkRepository.findOrCreate({
             where: {
                 threadId: thread.id,
                 userId: user.id
@@ -66,11 +72,11 @@ export class ThreadsService {
             await thread.$add('not_works', threadNotWork);
         } else {
             throw new HttpException('U have already set this thread not work', HttpStatus.BAD_REQUEST)
-        }
+        }*/
     }
 
     async removeThreadNotWork(thread: Thread, user: User) {
-        const threadNotWork = await this.threadsNotWorkRepository.findOne({
+        /*const threadNotWork = await this.threadsNotWorkRepository.findOne({
             where: {
                 threadId: thread.id,
                 userId: user.id
@@ -78,11 +84,11 @@ export class ThreadsService {
         })
         if (!threadNotWork) throw new NotFoundException();
         thread.$remove('not_works', threadNotWork);
-        threadNotWork.destroy()
+        threadNotWork.destroy()*/
     }
 
     async addThreadToFavorite(thread: Thread, user: User) {
-        const [threadFavorite, threadFavoriteCreated] = await this.threadsFavoriteRepository.findOrCreate({
+        /*const [threadFavorite, threadFavoriteCreated] = await this.threadsFavoriteRepository.findOrCreate({
             where: {
                 threadId: thread.id,
                 userId: user.id
@@ -92,11 +98,11 @@ export class ThreadsService {
             user.$add('favorite_threads', thread)
         } else {
             throw new BadRequestException('U have already add this thread to favorites')
-        }
+        }*/
     }
 
     async removeThreadFromFavorite(thread: Thread, user: User) {
-        const threadFavorite = await this.threadsFavoriteRepository.findOne({
+        /*const threadFavorite = await this.threadsFavoriteRepository.findOne({
             where: {
                 threadId: thread.id,
                 userId: user.id
@@ -105,6 +111,7 @@ export class ThreadsService {
         if (!threadFavorite) throw new NotFoundException();
         user.$remove('favorite_threads', thread)
         threadFavorite.destroy()
+         */
     }
 
     async addThreadsSyncToQueue(limit: number = 40) {
@@ -127,7 +134,23 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                 if (response.data.items.length > 0) {
                     for (let threadItem of response.data.items) {
                         const content_html = threadItem.content_html.replace(/<[^>]*>?/gm, "").replace(/Odkryta zawartość:/gm, "");
-                        const [thread, threadCreated] = await this.threadsRepository.findOrCreate({
+                        if (!await this.threadsRepository.findOne({where: {tid: threadItem.id}})) {
+                            const newThread = this.threadsRepository.create({
+                                tid: threadItem.id,
+                                url: threadItem.url,
+                                title: threadItem.title,
+                                content_html: content_html,
+                                created_at: threadItem.date_published,
+                                updated_at: threadItem.date_modified
+                            })
+                            await this.threadsRepository.save(newThread);
+
+                            const forumThreads = await forum.threads;
+                            forumThreads.push(newThread);
+
+                            await this.forumsService.save(forum);
+                        }
+                        /*const [thread, threadCreated] = await this.threadsRepository.findOrCreate({
                             where: {
                                 tid: threadItem.id
                             },
@@ -141,7 +164,7 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                         })
                         if (threadCreated) {
                             forum.$add('threads', thread);
-                        }
+                        }*/
                     }
                 }
             } catch (e) {

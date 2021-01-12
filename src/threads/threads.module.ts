@@ -1,5 +1,4 @@
 import {HttpModule, Module} from '@nestjs/common';
-import {threadsFavoriteProviders, threadsNotWorkProviders, threadsProviders} from "./threads.providers";
 import { ThreadsService } from './threads.service';
 import {ForumsModule} from "../forums/forums.module";
 import { ThreadsController } from './threads.controller';
@@ -7,6 +6,10 @@ import {ConfigModule} from "@nestjs/config";
 import {ScheduleModule} from "@nestjs/schedule";
 import {BullModule} from "@nestjs/bull";
 import {ThreadsProcessor} from "./threads.processor";
+import {TypeOrmModule} from "@nestjs/typeorm";
+import {Thread} from "./entities/thread.entity";
+import {FavoriteThread} from "./entities/favoriteThread.entity";
+import {ThreadNotWork} from "./entities/threadNotWork";
 
 @Module({
     imports: [
@@ -17,13 +20,11 @@ import {ThreadsProcessor} from "./threads.processor";
         HttpModule,
         ForumsModule,
         ScheduleModule.forRoot(),
+        TypeOrmModule.forFeature([Thread, FavoriteThread, ThreadNotWork])
     ],
     providers: [
         ThreadsService,
-        ThreadsProcessor,
-        ...threadsProviders,
-        ...threadsNotWorkProviders,
-        ...threadsFavoriteProviders
+        ThreadsProcessor
     ],
     exports: [ThreadsService],
     controllers: [ThreadsController]

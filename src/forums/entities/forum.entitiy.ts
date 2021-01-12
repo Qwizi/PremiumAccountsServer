@@ -1,4 +1,5 @@
-import {Column, Entity, PrimaryGeneratedColumn} from "typeorm";
+import {Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn} from "typeorm";
+import {Thread} from "../../threads/entities/thread.entity";
 
 @Entity()
 export class Forum {
@@ -11,7 +12,14 @@ export class Forum {
     @Column()
     title: string;
 
-    // TODO dodac relacje do tematow
+    @OneToMany(() => Thread, (thread: Thread) => thread.forum)
+    threads: Promise<Thread[]>
+
+    @CreateDateColumn()
+    public created_at: Date;
+
+    @UpdateDateColumn()
+    public updated_at: Date;
 }
 
 /*import {Column, HasMany, Model, Table} from "sequelize-typescript";

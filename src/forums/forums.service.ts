@@ -14,8 +14,14 @@ export class ForumsService {
         private httpService: HttpService,
     ) {}
 
+    async save(forum: Forum) {
+        return this.forumsRepository.save(forum);
+    }
+
     async create(createForumDto: CreateForumDto): Promise<Forum> {
-        return this.forumsRepository.create(createForumDto);
+        const forum = await this.forumsRepository.create(createForumDto);
+        await this.forumsRepository.save(forum);
+        return forum;
     }
 
     async findAll(options?: object): Promise<Forum[]> {
@@ -65,6 +71,7 @@ export class ForumsService {
             for (let forum of forumItems) {
                 if (!await this.forumsRepository.findOne({where: {fid: forum.fid, title: forum.title}})) {
                     const newForum = await this.forumsRepository.create({fid: forum.fid, title: forum.title});
+                    await this.forumsRepository.save(newForum);
                 }
             }
         } catch (e) {

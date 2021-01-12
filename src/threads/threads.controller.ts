@@ -14,7 +14,7 @@ import {ThreadsService} from "./threads.service";
 import {SearchThreadDto} from "./dto/searchThreadDto";
 import {Op} from 'sequelize';
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
-import {ThreadNotWork} from "./entities/threadNotWork";
+//import {ThreadNotWork} from "./entities/threadNotWork";
 
 @UseGuards(JwtAuthGuard)
 @Controller('threads')
@@ -24,7 +24,8 @@ export class ThreadsController {
 
     @Get(":id")
     async findOne(@Param('id') id: number) {
-        const thread = await this.threadsService.findOne({where: {id: id}, include: [ThreadNotWork]});
+        //const thread = await this.threadsService.findOne({where: {id: id}, include: [ThreadNotWork]});
+        const thread = await this.threadsService.findOne({where: {id: id}});
         if (!thread) throw new NotFoundException();
         return thread;
     }
@@ -84,8 +85,7 @@ export class ThreadsController {
             },
             order: [
                 ['updatedAt', 'DESC']
-            ],
-            include: [ThreadNotWork]
+            ]
         })
         if (!threads) throw new HttpException('Thread not found', HttpStatus.NOT_FOUND)
         return threads;
