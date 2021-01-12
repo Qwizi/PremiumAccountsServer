@@ -1,7 +1,6 @@
 import {HttpModule, Module} from '@nestjs/common';
 import {ForumsService} from './forums.service';
 import {ForumsController} from './forums.controller';
-import { forumsProviders} from "./forums.providers";
 import {AuthModule} from "../auth/auth.module";
 import {ConfigModule} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
@@ -14,7 +13,7 @@ import {Forum} from "./entities/forum.entitiy";
         HttpModule,
         TypeOrmModule.forFeature([Forum])
     ],
-    providers: [ForumsService, ...forumsProviders],
+    providers: [ForumsService],
     controllers: [ForumsController],
     exports: [ForumsService]
 })

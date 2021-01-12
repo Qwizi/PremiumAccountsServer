@@ -27,7 +27,5 @@ import {ThreadNotWork} from "../threads/entities/threadNotWork";
             synchronize: true
         })
     ],
-    //providers: [...databaseProviders],
-    //exports: [...databaseProviders]
 })
 export class DatabaseModule {}
