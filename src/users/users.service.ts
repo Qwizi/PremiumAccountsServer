@@ -13,7 +13,9 @@ export class UsersService {
     constructor(@InjectRepository(User) private usersRepository: Repository<User>) {}
 
     async create(createUserDto: CreateUserDto) {
-        return this.usersRepository.create(createUserDto);
+        const user = await this.usersRepository.create(createUserDto);
+        await this.usersRepository.save(user);
+        return user;
     }
 
     async findOne(options: object): Promise<User> {
@@ -56,10 +58,11 @@ export class UsersService {
             )
         }
         const hashedPassword = await bcrypt.hash(registerUserDto.password, 10)
-        return this.usersRepository.create({
+        const newUser =  await this.usersRepository.create({
             username: username,
             password: hashedPassword
         })
+        return this.usersRepository.save(newUser);
     }
 
     async getFavoritesThreads(user: User) {

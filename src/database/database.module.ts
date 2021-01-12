@@ -3,6 +3,10 @@ import {ConfigModule} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {User} from "../users/entities/user.enitiy";
 import {Forum} from "../forums/entities/forum.entitiy";
+import {Thread} from "../threads/entities/thread.entity";
+import {FavoriteThread} from "../threads/entities/favoriteThread.entity";
+import {ThreadNotWork} from "../threads/entities/threadNotWork";
+
 @Module({
     imports: [
         ConfigModule.forRoot(),
@@ -15,7 +19,10 @@ import {Forum} from "../forums/entities/forum.entitiy";
             database: process.env.DB_DATABASE,
             entities: [
                 User,
-                Forum
+                Forum,
+                Thread,
+                FavoriteThread,
+                ThreadNotWork
             ],
             synchronize: true
         })
