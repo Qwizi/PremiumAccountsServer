@@ -4,25 +4,22 @@ import {Forum} from "./entities/forum.entitiy";
 import {CreateForumDto} from "./dto/createForumDto";
 import * as cheerio from 'cheerio';
 import * as pIteration from 'p-iteration';
+import {InjectRepository} from "@nestjs/typeorm";
+import {Repository} from "typeorm";
 
 @Injectable()
-export class ForumsService implements OnModuleInit {
+export class ForumsService {
     constructor(
-        @Inject(FORUMS_REPOSITORY) private forumsRepository: typeof Forum,
+        @InjectRepository(Forum) private forumsRepository: Repository<Forum>,
         private httpService: HttpService,
     ) {}
 
-    async onModuleInit() {
-        //await this.syncForums();
-        //await this.syncThreads()
-    }
-
     async create(createForumDto: CreateForumDto): Promise<Forum> {
-        return this.forumsRepository.create<Forum>(createForumDto);
+        return this.forumsRepository.create(createForumDto);
     }
 
     async findAll(options?: object): Promise<Forum[]> {
-        return options !== null ? this.forumsRepository.findAll(options): this.forumsRepository.findAll();
+        return options !== null ? this.forumsRepository.find(options): this.forumsRepository.find();
     }
 
     async findOne(options: object): Promise<Forum> {
@@ -30,12 +27,13 @@ export class ForumsService implements OnModuleInit {
     }
 
     async update(forum: Forum, createForumDto: CreateForumDto): Promise<Forum> {
-        await forum.update(createForumDto);
-        return forum;
+        if (createForumDto.fid) forum.fid = createForumDto.fid;
+        if (createForumDto.title) forum.title = createForumDto.title
+        return this.forumsRepository.save(forum);
     }
 
-    async remove(forum: Forum) {
-        return forum.destroy();
+    async delete(forum: Forum) {
+        return this.forumsRepository.delete(forum.id);
     }
 
     async sync() {

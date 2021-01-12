@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import {ConfigModule} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {User} from "../users/entities/user.enitiy";
-
+import {Forum} from "../forums/entities/forum.entitiy";
 @Module({
     imports: [
         ConfigModule.forRoot(),
@@ -14,7 +14,8 @@ import {User} from "../users/entities/user.enitiy";
             password: process.env.DB_PASS,
             database: process.env.DB_DATABASE,
             entities: [
-                User
+                User,
+                Forum
             ],
             synchronize: true
         })
