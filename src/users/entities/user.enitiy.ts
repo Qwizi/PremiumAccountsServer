@@ -41,4 +41,10 @@ export class User {
     @OneToMany(() => Thread, (thread: Thread) => thread.not_works)
     not_works: Promise<Thread[]>
 
+    /*
+    @ManyToMany(() => Thread, (thread: Thread) => thread.user_favorites)
+    @JoinTable()
+    favorite_threads: Thread[]
+     */
+
 }
