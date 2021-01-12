@@ -2,7 +2,7 @@ import {IsNotEmpty} from "class-validator";
 
 export class CreateForumDto {
     @IsNotEmpty()
-    tid: number;
+    fid: number;
 
     @IsNotEmpty()
     title: string;
