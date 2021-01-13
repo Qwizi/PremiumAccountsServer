@@ -1,7 +1,9 @@
 import {
     Body,
-    Controller, Delete,
-    Get, HttpCode,
+    Controller,
+    Delete,
+    Get,
+    HttpCode,
     NotFoundException,
     Param,
     Post,
@@ -11,6 +13,8 @@ import {
 import {ThreadsService} from "./threads.service";
 import {SearchThreadDto} from "./dto/searchThreadDto";
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
+import {Like} from "typeorm";
+
 //import {ThreadNotWork} from "./entities/threadNotWork";
 
 @UseGuards(JwtAuthGuard)
@@ -64,6 +68,14 @@ export class ThreadsController {
     @Post('search')
     @HttpCode(200)
     async search(@Body() searchThreadDto: SearchThreadDto) {
+        return await this.threadsService.findAll({
+            where: {
+                title: Like(`%${searchThreadDto.name}%`)
+            },
+            order: {
+                updated_at: "DESC"
+            }
+        })
         /*const threads = await this.threadsService.findAll({
             where: {
                 title: {
@@ -77,7 +89,7 @@ export class ThreadsController {
                 ['updatedAt', 'DESC']
             ]
         })
-        if (!threads) throw new HttpException('Thread not found', HttpStatus.NOT_FOUND)
-        return threads;*/
+
+        ;*/
     }
 }
