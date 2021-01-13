@@ -4,8 +4,6 @@ import {TypeOrmModule} from "@nestjs/typeorm";
 import {User} from "../users/entities/user.enitiy";
 import {Forum} from "../forums/entities/forum.entitiy";
 import {Thread} from "../threads/entities/thread.entity";
-import {FavoriteThread} from "../threads/entities/favoriteThread.entity";
-import {ThreadNotWork} from "../threads/entities/threadNotWork";
 
 @Module({
     imports: [
@@ -20,9 +18,7 @@ import {ThreadNotWork} from "../threads/entities/threadNotWork";
             entities: [
                 User,
                 Forum,
-                Thread,
-                FavoriteThread,
-                ThreadNotWork
+                Thread
             ],
             synchronize: true
         })

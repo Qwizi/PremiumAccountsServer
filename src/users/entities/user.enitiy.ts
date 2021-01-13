@@ -1,10 +1,11 @@
 import {
     Column,
     CreateDateColumn,
-    Entity,
+    Entity, ManyToMany,
     OneToMany,
     PrimaryGeneratedColumn,
-    UpdateDateColumn
+    UpdateDateColumn,
+    JoinTable
 } from "typeorm";
 import {Thread} from "../../threads/entities/thread.entity";
 
@@ -35,11 +36,9 @@ export class User {
     @UpdateDateColumn()
     public updated_at: Date;
 
-    @OneToMany(() => Thread, (thread: Thread) => thread.favorites)
-    favorite_threads: Promise<Thread[]>
-
-    @OneToMany(() => Thread, (thread: Thread) => thread.not_works)
-    not_works: Promise<Thread[]>
+    @ManyToMany(() => Thread, thread => thread.not_work_users)
+    @JoinTable()
+    not_work_threads: Thread[]
 
     /*
     @ManyToMany(() => Thread, (thread: Thread) => thread.user_favorites)

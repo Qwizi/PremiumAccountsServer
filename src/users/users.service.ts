@@ -7,6 +7,7 @@ import {UpdateUserDto} from "./dto/updateUserDto";
 import {RegisterUserDto} from "./dto/registerUserDto";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
+import {Thread} from "../threads/entities/thread.entity";
 
 @Injectable()
 export class UsersService {

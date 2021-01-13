@@ -1,7 +1,7 @@
 import {
     Column,
     CreateDateColumn,
-    Entity,
+    Entity, ManyToMany,
     ManyToOne,
     OneToMany,
     PrimaryGeneratedColumn,
@@ -39,9 +39,6 @@ export class Thread {
     @ManyToOne(() => Forum, (forum: Forum) => forum.threads)
     forum: Promise<Forum>
 
-    @OneToMany(() => User, (user: User) => user.favorite_threads)
-    favorites: Promise<User[]>
-
-    @OneToMany(() => User, (user: User) => user.not_works)
-    not_works: Promise<User[]>
+    @ManyToMany(() => User, user => user.not_work_threads)
+    not_work_users: User[]
 }

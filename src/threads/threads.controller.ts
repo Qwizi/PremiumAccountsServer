@@ -29,20 +29,17 @@ export class ThreadsController {
 
     @Post(":id/not_work")
     async setNotWork(@Param('id') id: number, @Request() req) {
-        const thread = await this.threadsService.findOne({where: {id: id}});
+        const thread = await this.threadsService.findOne({where: {id: id}, relations: ["not_work_users"]});
         if (!thread) throw new NotFoundException();
-
-        await this.threadsService.setThreadNotWork(thread, req.user);
-        return {message: 'Successfully set thread not work'}
+        return this.threadsService.setThreadNotWork(thread, req.user);
     }
 
     @Delete(":id/not_work")
     async removeNotWork(@Param('id') id: number, @Request() req) {
-        const thread = await this.threadsService.findOne({where: {id: id}});
+        const thread = await this.threadsService.findOne({where: {id: id}, relations: ["not_work_users"]});
         if (!thread) throw new NotFoundException();
 
-        await this.threadsService.removeThreadNotWork(thread, req.user);
-        return {message: 'Successfully remove thread not work'}
+        return this.threadsService.removeThreadNotWork(thread, req.user);
     }
 
     @Post(":id/favorite")
