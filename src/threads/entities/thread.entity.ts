@@ -41,4 +41,7 @@ export class Thread {
 
     @ManyToMany(() => User, user => user.not_work_threads)
     not_work_users: User[]
+
+    @ManyToMany(() => User, user => user.favorite_threads)
+    favorite_users: User[]
 }

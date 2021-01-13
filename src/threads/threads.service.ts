@@ -72,30 +72,21 @@ export class ThreadsService {
     }
 
     async addThreadToFavorite(thread: Thread, user: User) {
-        /*const [threadFavorite, threadFavoriteCreated] = await this.threadsFavoriteRepository.findOrCreate({
-            where: {
-                threadId: thread.id,
-                userId: user.id
-            }
-        })
-        if (threadFavoriteCreated) {
-            user.$add('favorite_threads', thread)
-        } else {
-            throw new BadRequestException('U have already add this thread to favorites')
-        }*/
+       if (thread.favorite_users.find(item => item.id === user.id)) {
+           throw new HttpException('U have already added this thread to favorites', HttpStatus.BAD_REQUEST)
+       }
+       thread.favorite_users.push(user);
+       await this.threadsRepository.save(thread);
+       return thread;
     }
 
     async removeThreadFromFavorite(thread: Thread, user: User) {
-        /*const threadFavorite = await this.threadsFavoriteRepository.findOne({
-            where: {
-                threadId: thread.id,
-                userId: user.id
-            }
-        })
-        if (!threadFavorite) throw new NotFoundException();
-        user.$remove('favorite_threads', thread)
-        threadFavorite.destroy()
-         */
+        if (!thread.favorite_users.find(item => item.id === user.id)) {
+            throw new NotFoundException();
+        }
+        thread.favorite_users = thread.favorite_users.filter(u => u.id !== user.id);
+        await this.threadsRepository.save(thread);
+        return thread;
     }
 
     async addThreadsSyncToQueue(limit: number = 40) {

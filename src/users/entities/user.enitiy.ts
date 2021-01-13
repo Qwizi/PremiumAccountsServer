@@ -40,6 +40,10 @@ export class User {
     @JoinTable()
     not_work_threads: Thread[]
 
+    @ManyToMany(() => Thread, thread => thread.favorite_users)
+    @JoinTable()
+    favorite_threads: Thread[]
+
     /*
     @ManyToMany(() => Thread, (thread: Thread) => thread.user_favorites)
     @JoinTable()

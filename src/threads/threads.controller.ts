@@ -44,20 +44,16 @@ export class ThreadsController {
 
     @Post(":id/favorite")
     async addToFavorite(@Param('id') id: number, @Request() req) {
-        const thread = await this.threadsService.findOne({where: {id: id}});
+        const thread = await this.threadsService.findOne({where: {id: id}, relations: ["favorite_users"]});
         if (!thread) throw new NotFoundException();
-
-        await this.threadsService.addThreadToFavorite(thread, req.user);
-        return {message: 'Successfully add thread to favorites'}
+        return this.threadsService.addThreadToFavorite(thread, req.user);
     }
 
     @Delete(':id/favorite')
     async removeFromFavorite(@Param('id') id: number, @Request() req) {
-        const thread = await this.threadsService.findOne({where: {id: id}});
+        const thread = await this.threadsService.findOne({where: {id: id}, relations: ["favorite_users"]});
         if (!thread) throw new NotFoundException();
-
-        await this.threadsService.removeThreadFromFavorite(thread, req.user);
-        return {message: 'Successfully removed thread from favorites'}
+        return this.threadsService.removeThreadFromFavorite(thread, req.user);
     }
 
     @Post('sync')
