@@ -8,8 +8,6 @@ import {BullModule} from "@nestjs/bull";
 import {ThreadsProcessor} from "./threads.processor";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {Thread} from "./entities/thread.entity";
-import {FavoriteThread} from "./entities/favoriteThread.entity";
-import {ThreadNotWork} from "./entities/threadNotWork";
 
 @Module({
     imports: [
@@ -20,7 +18,7 @@ import {ThreadNotWork} from "./entities/threadNotWork";
         HttpModule,
         ForumsModule,
         ScheduleModule.forRoot(),
-        TypeOrmModule.forFeature([Thread, FavoriteThread, ThreadNotWork])
+        TypeOrmModule.forFeature([Thread])
     ],
     providers: [
         ThreadsService,

@@ -1,4 +1,4 @@
-import {Controller, Get, Request, UseGuards} from '@nestjs/common';
+import {Body, Controller, Get, Post, Req, Request, UseGuards} from '@nestjs/common';
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
 import {UsersService} from "./users.service";
 
@@ -16,4 +16,5 @@ export class UsersController {
     async favorites(@Request() req) {
         return this.usersService.getFavoritesThreads(req.user);
     }
+
 }

@@ -1,13 +1,12 @@
 import {
-    HttpService,
-    Injectable,
+    HttpException,
+    HttpService, HttpStatus,
+    Injectable, NotFoundException,
 } from '@nestjs/common';
 import {Thread} from "./entities/thread.entity";
 import {CreateThreadDto} from "./dto/createThreadDto";
 import {ForumsService} from "../forums/forums.service";
-// import {ThreadNotWork} from "./entities/threadNotWork";
 import {User} from "../users/entities/user.enitiy";
-// import {ThreadFavorite} from "./entities/threadFavorite";
 import {Cron, CronExpression} from "@nestjs/schedule";
 import {InjectQueue} from "@nestjs/bull";
 import {Queue} from "bull";
@@ -19,8 +18,6 @@ import {Forum} from "../forums/entities/forum.entitiy";
 export class ThreadsService {
     constructor(
         @InjectRepository(Thread) private threadsRepository: Repository<Thread>,
-        // @Inject(THREADS_NOT_WORK_REPOSITORY) private threadsNotWorkRepository: typeof ThreadNotWork,
-        // @Inject(THREADS_FAVORITE_REPOSITORY) private threadsFavoriteRepository: typeof ThreadFavorite,
         @InjectQueue('threads') private threadsQueue: Queue,
         private forumsService: ForumsService,
         private httpService: HttpService,
@@ -56,29 +53,22 @@ export class ThreadsService {
     }
 
     async setThreadNotWork(thread: Thread, user: User) {
-        /*const [threadNotWork, threadNotWorkCreated] = await this.threadsNotWorkRepository.findOrCreate({
-            where: {
-                threadId: thread.id,
-                userId: user.id
-            }
-        })
-        if (threadNotWorkCreated) {
-            await thread.$add('not_works', threadNotWork);
-        } else {
+        // Szuakmy czy temat nie zostal juz przypadkiem zgloszony przez tego uzytkownika
+        if (thread.not_work_users.find(item => item.id === user.id)) {
             throw new HttpException('U have already set this thread not work', HttpStatus.BAD_REQUEST)
-        }*/
+        }
+        thread.not_work_users.push(user);
+        await this.threadsRepository.save(thread);
+        return thread
     }
 
     async removeThreadNotWork(thread: Thread, user: User) {
-        /*const threadNotWork = await this.threadsNotWorkRepository.findOne({
-            where: {
-                threadId: thread.id,
-                userId: user.id
-            }
-        })
-        if (!threadNotWork) throw new NotFoundException();
-        thread.$remove('not_works', threadNotWork);
-        threadNotWork.destroy()*/
+        if (!thread.not_work_users.find(item => item.id === user.id)) {
+            throw new NotFoundException();
+        }
+        thread.not_work_users = thread.not_work_users.filter(u => u.id !== user.id);
+        await this.threadsRepository.save(thread);
+        return thread;
     }
 
     async addThreadToFavorite(thread: Thread, user: User) {
