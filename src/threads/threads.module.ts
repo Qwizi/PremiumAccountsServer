@@ -8,17 +8,21 @@ import {BullModule} from "@nestjs/bull";
 import {ThreadsProcessor} from "./threads.processor";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {Thread} from "./entities/thread.entity";
+import {PuppeteerModule} from "nest-puppeteer";
 
 @Module({
     imports: [
         ConfigModule.forRoot(),
+        TypeOrmModule.forFeature([Thread]),
         BullModule.registerQueue({
             name: 'threads'
         }),
         HttpModule,
         ForumsModule,
         ScheduleModule.forRoot(),
-        TypeOrmModule.forFeature([Thread])
+        PuppeteerModule.forRoot({
+            headless: true
+        })
     ],
     providers: [
         ThreadsService,
