@@ -15,13 +15,11 @@ import {SearchThreadDto} from "./dto/searchThreadDto";
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
 import {Like} from "typeorm";
 
-//import {ThreadNotWork} from "./entities/threadNotWork";
-
 @UseGuards(JwtAuthGuard)
 @Controller('threads')
 export class ThreadsController {
-    constructor(private threadsService: ThreadsService) {
-    }
+    constructor(
+        private threadsService: ThreadsService) {}
 
     @Get(":id")
     async findOne(@Param('id') id: number) {
@@ -76,20 +74,5 @@ export class ThreadsController {
                 updated_at: "DESC"
             }
         })
-        /*const threads = await this.threadsService.findAll({
-            where: {
-                title: {
-                    [Op.substring]: searchThreadDto.name
-                },
-                content_html: {
-                    [Op.substring]: ':'
-                }
-            },
-            order: [
-                ['updatedAt', 'DESC']
-            ]
-        })
-
-        ;*/
     }
 }

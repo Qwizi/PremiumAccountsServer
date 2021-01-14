@@ -1,8 +1,4 @@
-import {
-    HttpException,
-    HttpService, HttpStatus,
-    Injectable, NotFoundException,
-} from '@nestjs/common';
+import {HttpException, HttpService, HttpStatus, Injectable, Logger, NotFoundException,} from '@nestjs/common';
 import {Thread} from "./entities/thread.entity";
 import {CreateThreadDto} from "./dto/createThreadDto";
 import {ForumsService} from "../forums/forums.service";
@@ -12,13 +8,19 @@ import {InjectQueue} from "@nestjs/bull";
 import {Queue} from "bull";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
+import {InjectBrowser} from "nest-puppeteer";
+import {Browser, Page} from "puppeteer";
+import {MYBB_COOKIE_OBJ} from "../forums/forums.constants";
 import {Forum} from "../forums/entities/forum.entitiy";
 
 @Injectable()
 export class ThreadsService {
+    private readonly logger = new Logger(ThreadsService.name);
+
     constructor(
         @InjectRepository(Thread) private threadsRepository: Repository<Thread>,
         @InjectQueue('threads') private threadsQueue: Queue,
+        @InjectBrowser() private readonly browser: Browser,
         private forumsService: ForumsService,
         private httpService: HttpService,
     ) {
@@ -72,12 +74,12 @@ export class ThreadsService {
     }
 
     async addThreadToFavorite(thread: Thread, user: User) {
-       if (thread.favorite_users.find(item => item.id === user.id)) {
-           throw new HttpException('U have already added this thread to favorites', HttpStatus.BAD_REQUEST)
-       }
-       thread.favorite_users.push(user);
-       await this.threadsRepository.save(thread);
-       return thread;
+        if (thread.favorite_users.find(item => item.id === user.id)) {
+            throw new HttpException('U have already added this thread to favorites', HttpStatus.BAD_REQUEST)
+        }
+        thread.favorite_users.push(user);
+        await this.threadsRepository.save(thread);
+        return thread;
     }
 
     async removeThreadFromFavorite(thread: Thread, user: User) {
@@ -95,10 +97,140 @@ export class ThreadsService {
         })
     }
 
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-    async sync(limit: number = 40) {
+    async getThreadContent(page: Page, url: string) {
+        await page.setCookie(MYBB_COOKIE_OBJ);
+        await page.goto(url);
+
+        try {
+            const thxInfoMsgSelectors = "div.info_thx.message";
+            await page.waitForSelector(thxInfoMsgSelectors)
+            return await page.evaluate((thxInfoMsgSelectors) => {
+                const msg = document.querySelector(thxInfoMsgSelectors);
+                return msg.textContent
+            }, thxInfoMsgSelectors)
+        } catch (e) {
+            const postBodySelectors = "div.post_body > div > div";
+            await page.waitForSelector(postBodySelectors)
+            return await page.evaluate((postBodySelectors) => {
+                const msg = document.querySelector(postBodySelectors);
+                return msg.textContent
+            }, postBodySelectors)
+        }
+    }
+
+    async createPages(currentUrls: Thread[]) {
+        for await (let url of currentUrls) {
+            // Otwieramy 5 nowych kart
+            await this.browser.newPage();
+        }
+        // Pobieramy otwarte karty
+        let pagesCreated = await this.browser.pages();
+        // Usuwaamy pierwsza karte, poniewaz przegladarka musi byc otwarta
+        pagesCreated.shift();
+
+        this.logger.debug(`Utworzonych stron ${pagesCreated.length}`)
+
+        for (let i = 0; i <= currentUrls.length; i++) {
+            try {
+                if (currentUrls.length >= pagesCreated.length) {
+                    const page = pagesCreated[i];
+                    if (page) {
+                        await pagesCreated[i].bringToFront();
+                        const thread = currentUrls[i];
+                        if (thread) {
+                            let content_html = await this.getThreadContent(pagesCreated[i], currentUrls[i].url);
+                            thread.is_visible = true;
+                            thread.content_html = content_html;
+                            await this.threadsRepository.save(thread);
+                            this.logger.debug(`Thread content ${thread.content_html}`)
+                        }
+
+                    }
+                    //await this.sleep(5000);
+                }
+            } catch (e) {
+                const page = pagesCreated[i];
+                if (page !== undefined) {
+                    await pagesCreated[i].close();
+                }
+            }
+        }
+
+        return pagesCreated;
+    }
+
+    async getThreadsToScrappContent(forum: Forum) {
+        let items = await this.threadsRepository.find({where: {forum: forum.id, content_html: '', is_visible: false}});
+        this.logger.debug(`(${forum.fid} - ${forum.title}) Ilosc: ${items.length}`);
+        return items;
+    }
+
+    async openPages() {
+        let forums = await this.forumsService.findAll();
+        for await (let forum of forums) {
+            let items = await this.getThreadsToScrappContent(forum);
+            if (items.length > 0) {
+                this.logger.debug(`${items.map(item => {
+                    return item.title
+                }).join(', \n')}`);
+                // Url ktore sa aktualne przetwarzane
+                let currentUrls = [];
+                this.logger.debug(`Itemy na poczatku ${items.length}, ${items.map(item => {
+                    return item.url
+                }).join(',')}`);
+                // Dopuki
+                while (items.length > 0) {
+                    if (items.length >= 15) {
+                        currentUrls = items.slice(Math.max(items.length - 15, 0))
+                        this.logger.debug(`CurrentUrls gdy jest wiecej niz 5. ${currentUrls.length}, ${currentUrls.map(item => {
+                            return item.url
+                        }).join(',')}`)
+
+                        const pagesCreated = await this.createPages(currentUrls);
+
+                        // Zaamykamy otwarte karty
+                        for await (let page of pagesCreated) {
+                            await page.close();
+                        }
+
+                        // usuwamy z listy itemow aktualne juz sprawdzone itemy
+                        items = items.filter(item => !currentUrls.includes(item))
+                        this.logger.debug(`Itemy po usunieciu ${items.length}, ${items.map(item => {
+                            return item.url
+                        }).join(',')}`)
+                    } else {
+                        // Sytuacja gdy pozostalych itemow jest mniej niz 5
+                        currentUrls = items;
+
+                        await this.createPages(currentUrls);
+
+                        const pagesCreated = await this.createPages(currentUrls);
+
+                        // Zaamykamy otwarte karty
+                        for await (let page of pagesCreated) {
+                            await page.close();
+                        }
+
+                        this.logger.debug(`CurrentUrls gdy jest mniej niz 5. ${currentUrls.length}, ${currentUrls.map(item => {
+                            return item.url
+                        }).join(',')}`)
+                        items = [];
+                        this.logger.debug(`Itemy po usunieciu ${items.length}, ${items.map(item => {
+                            return item.url
+                        }).join(',')}`)
+                    }
+                }
+            }
+        }
+    }
+
+    async createThreads(limit: number = 40) {
         const forums = await this.forumsService.findAll();
-        for (let forum of forums) {
+        for await (let forum of forums) {
             try {
                 const response = await this.httpService.get(`
 https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, {
@@ -107,45 +239,39 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                     }
                 }).toPromise()
                 if (response.data.items.length > 0) {
-                    for (let threadItem of response.data.items) {
-                        const content_html = threadItem.content_html.replace(/<[^>]*>?/gm, "").replace(/Odkryta zawartość:/gm, "");
+                    for await (let threadItem of response.data.items) {
                         if (!await this.threadsRepository.findOne({where: {tid: threadItem.id}})) {
                             const newThread = this.threadsRepository.create({
                                 tid: threadItem.id,
                                 url: threadItem.url,
                                 title: threadItem.title,
-                                content_html: content_html,
+                                //content_html: content_html,
                                 created_at: threadItem.date_published,
-                                updated_at: threadItem.date_modified
+                                updated_at: threadItem.date_modified,
+                                is_visible: false
                             })
+
                             await this.threadsRepository.save(newThread);
 
                             const forumThreads = await forum.threads;
                             forumThreads.push(newThread);
 
                             await this.forumsService.save(forum);
+                            this.logger.debug(`Thread -> ${newThread.title}`);
+                        } else {
+                            this.logger.debug(`Thread[Exist] -> ${threadItem.title}`);
                         }
-                        /*const [thread, threadCreated] = await this.threadsRepository.findOrCreate({
-                            where: {
-                                tid: threadItem.id
-                            },
-                            defaults: {
-                                url: threadItem.url,
-                                title: threadItem.title,
-                                content_html: content_html,
-                                createdAt: threadItem.date_published,
-                                updatedAt: threadItem.date_modified
-                            }
-                        })
-                        if (threadCreated) {
-                            forum.$add('threads', thread);
-                        }*/
                     }
                 }
             } catch (e) {
                 console.log(e);
             }
         }
+    }
+
+    async sync(limit: number = 40) {
+        await this.createThreads(limit);
+        await this.openPages();
     }
 
     @Cron(CronExpression.EVERY_2_HOURS)
