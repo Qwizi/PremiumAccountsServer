@@ -14,6 +14,7 @@ import {ThreadsService} from "./threads.service";
 import {SearchThreadDto} from "./dto/searchThreadDto";
 import {JwtAuthGuard} from "../auth/jwt-auth.guard";
 import {Like} from "typeorm";
+import {User} from "../users/entities/user.enitiy";
 
 @UseGuards(JwtAuthGuard)
 @Controller('threads')
@@ -66,13 +67,6 @@ export class ThreadsController {
     @Post('search')
     @HttpCode(200)
     async search(@Body() searchThreadDto: SearchThreadDto) {
-        return await this.threadsService.findAll({
-            where: {
-                title: Like(`%${searchThreadDto.name}%`)
-            },
-            order: {
-                updated_at: "DESC"
-            }
-        })
+        return this.threadsService.search(searchThreadDto);
     }
 }

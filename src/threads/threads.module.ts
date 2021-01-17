@@ -9,11 +9,12 @@ import {ThreadsProcessor} from "./threads.processor";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {Thread} from "./entities/thread.entity";
 import {PuppeteerModule} from "nest-puppeteer";
+import {User} from "../users/entities/user.enitiy";
 
 @Module({
     imports: [
         ConfigModule.forRoot(),
-        TypeOrmModule.forFeature([Thread]),
+        TypeOrmModule.forFeature([Thread, User]),
         BullModule.registerQueue({
             name: 'threads'
         }),
