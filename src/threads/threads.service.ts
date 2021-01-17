@@ -7,12 +7,13 @@ import {Cron, CronExpression} from "@nestjs/schedule";
 import {InjectQueue} from "@nestjs/bull";
 import {Queue} from "bull";
 import {InjectRepository} from "@nestjs/typeorm";
-import {Repository} from "typeorm";
+import {Like, Repository} from "typeorm";
 import {InjectBrowser} from "nest-puppeteer";
 import {Browser, Page} from "puppeteer";
 import {MYBB_COOKIE_OBJ} from "../forums/forums.constants";
 import {Forum} from "../forums/entities/forum.entitiy";
 import {handle} from "../app.uitils";
+import {SearchThreadDto} from "./dto/searchThreadDto";
 
 @Injectable()
 export class ThreadsService {
@@ -267,6 +268,19 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                 console.log(e);
             }
         }
+    }
+
+    async search(searchThreadDto: SearchThreadDto) {
+        return await this.threadsRepository.find({
+            where: {
+                title: Like(`%${searchThreadDto.name}%`),
+                is_visible: true
+            },
+            order: {
+                updated_at: "DESC"
+            },
+            relations: ["favorite_users"]
+        })
     }
 
     async sync(limit: number = 40) {
