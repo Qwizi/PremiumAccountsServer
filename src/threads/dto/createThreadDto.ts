@@ -11,5 +11,11 @@ export class CreateThreadDto {
     title: string;
 
     @IsNotEmpty()
-    content_html: string;
+    created_at: string;
+
+    @IsNotEmpty()
+    updated_at: string;
+
+    @IsNotEmpty()
+    is_visible: boolean;
 }

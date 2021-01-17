@@ -5,15 +5,20 @@ import {AuthModule} from "../auth/auth.module";
 import {ConfigModule} from "@nestjs/config";
 import {TypeOrmModule} from "@nestjs/typeorm";
 import {Forum} from "./entities/forum.entitiy";
+import {BullModule} from "@nestjs/bull";
+import {ForumsProcessor} from "./forums.processor";
 
 @Module({
     imports: [
         ConfigModule.forRoot(),
         AuthModule,
         HttpModule,
+        BullModule.registerQueue({
+            name: 'forums'
+        }),
         TypeOrmModule.forFeature([Forum])
     ],
-    providers: [ForumsService],
+    providers: [ForumsService, ForumsProcessor],
     controllers: [ForumsController],
     exports: [ForumsService]
 })
