@@ -6,7 +6,7 @@ import {
     HttpCode,
     NotFoundException,
     Param,
-    Post,
+    Post, Query,
     Request,
     UseGuards
 } from '@nestjs/common';
@@ -21,6 +21,17 @@ import {User} from "../users/entities/user.enitiy";
 export class ThreadsController {
     constructor(
         private threadsService: ThreadsService) {}
+
+    @Get('search')
+    async search(
+        @Query('name') name: string,
+        @Query('page') page: number = 1,
+        @Query('limit') limit: number = 10
+    ) {
+        const searchThreadDto = new SearchThreadDto();
+        searchThreadDto.name = name;
+        return this.threadsService.search(searchThreadDto, {page, limit, route: `http://localhost:${process.env.PORT}/threads/search`});
+    }
 
     @Get(":id")
     async findOne(@Param('id') id: number) {
@@ -62,11 +73,5 @@ export class ThreadsController {
     @Post('sync')
     async sync() {
         return this.threadsService.addThreadsSyncToQueue();
-    }
-
-    @Post('search')
-    @HttpCode(200)
-    async search(@Body() searchThreadDto: SearchThreadDto) {
-        return this.threadsService.search(searchThreadDto);
     }
 }

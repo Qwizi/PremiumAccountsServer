@@ -14,6 +14,7 @@ import {MYBB_COOKIE_OBJ} from "../forums/forums.constants";
 import {Forum} from "../forums/entities/forum.entitiy";
 import {handle} from "../app.uitils";
 import {SearchThreadDto} from "./dto/searchThreadDto";
+import {IPaginationOptions, paginate, Pagination} from "nestjs-typeorm-paginate";
 
 @Injectable()
 export class ThreadsService {
@@ -96,10 +97,6 @@ export class ThreadsService {
         await this.threadsQueue.add({
             limit: limit
         })
-    }
-
-    sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async getThreadContent(page: Page, url: string) {
@@ -270,8 +267,8 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
         }
     }
 
-    async search(searchThreadDto: SearchThreadDto) {
-        return await this.threadsRepository.find({
+    async search(searchThreadDto: SearchThreadDto, options: IPaginationOptions): Promise<Pagination<Thread>> {
+        return paginate<Thread>(this.threadsRepository, options, {
             where: {
                 title: Like(`%${searchThreadDto.name}%`),
                 is_visible: true
