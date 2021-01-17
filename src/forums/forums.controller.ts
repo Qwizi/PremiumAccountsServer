@@ -15,7 +15,7 @@ export class ForumsController {
 
     @Post("sync")
     async syncForums() {
-        return this.forumsService.sync()
+        return this.forumsService.addForumsSyncToQueue()
     }
 
     @Get(':id')

@@ -5,11 +5,14 @@ import {CreateForumDto} from "./dto/createForumDto";
 import * as cheerio from 'cheerio';
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
+import {InjectQueue} from "@nestjs/bull";
+import {Queue} from "bull";
 
 @Injectable()
 export class ForumsService {
     constructor(
         @InjectRepository(Forum) private forumsRepository: Repository<Forum>,
+        @InjectQueue('forums') private forumsQueue: Queue,
         private httpService: HttpService,
     ) {}
 
@@ -76,48 +79,12 @@ export class ForumsService {
         } catch (e) {
             console.log(e)
         }
-        // Tworzymy nowa strone
-        /*const page = await this.browser.newPage()
-        await page.setCookie(MYBB_COOKIE_OBJ);
-        // Przechodzimy na adres syndication
-        await page.goto(EPREMKI_RSS_URL);
-
-        await page.waitForSelector("select[name='forums[]']");
-
-
-        // Pobieramy selecta for
-        let forumOptions = await page.$$("select[name='forums[]'] > option")
-        const ignoreForumsId = await this.getIgnoreForums();
-        console.log(forumOptions.length);
-        for (let option of forumOptions) {
-            // Pobieramy nazwe forum
-            // @ts-ignore
-            let name = await page.evaluate(el => el.innerHTML, option);
-
-            // Pobieramy id forum
-            // @ts-ignore
-            let value = await page.evaluate(el => el.value, option);
-
-            // Sprawdzamy tylko te fora ktore chcemy
-            if (!ignoreForumsId.includes(value)) {
-                // Usuamy &nbsp; z nazwy
-                let replaceName = name.replace(/&nbsp;/g, "").replace(" ", "");
-
-                // Sprawdzamy czy forum o danej nazwie i id istnieje jezeli nie to tworzymy nowe forum
-                if (!await this.forumsRepository.findOne({where: {fid: value, title: replaceName}})) {
-                    const newForum = await this.forumsRepository.create({fid: value, title: replaceName});
-                }
-
-                console.log(replaceName);
-                console.log(value);
-            }
-        }
-        // Zamykamy strone
-        await page.close();
-        // Zamykamy przegladarke
-        await this.browser.close();
-        */
     }
+
+    async addForumsSyncToQueue() {
+        return this.forumsQueue.add({});
+    }
+
     async getIgnoreForums() {
         return [
             'all',
@@ -189,7 +156,27 @@ export class ForumsService {
             '61',
             '81',
             '102',
-            '189'
+            '189',
+            '113',
+            '112',
+            '118',
+            '135',
+            '106',
+            '124',
+            '125',
+            '139',
+            '139',
+            '117',
+            '116',
+            '119',
+            '181',
+            '180',
+            '154',
+            '153',
+            '201',
+            '202',
+            '208',
+            '155',
         ]
     }
 
