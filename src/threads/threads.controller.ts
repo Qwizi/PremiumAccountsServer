@@ -26,7 +26,7 @@ export class ThreadsController {
     async search(
         @Query('name') name: string,
         @Query('page') page: number = 1,
-        @Query('limit') limit: number = 10
+        @Query('limit') limit: number = 9
     ) {
         const searchThreadDto = new SearchThreadDto();
         searchThreadDto.name = name;

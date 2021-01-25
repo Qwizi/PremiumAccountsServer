@@ -67,6 +67,8 @@ export class UsersService {
     }
 
     async getFavoritesThreads(user: User) {
+        const u = await this.usersRepository.find({where: {id: user.id}, relations: ["favorite_threads"]})
+        return u
         //return user.favorite_threads
     }
 }
