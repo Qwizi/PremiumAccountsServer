@@ -27,8 +27,6 @@ import {User} from "../users/entities/user.enitiy";
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--single-process',
-                '--no-zygote'
             ]
         })
     ],
