@@ -22,7 +22,7 @@ import {User} from "../users/entities/user.enitiy";
         ForumsModule,
         ScheduleModule.forRoot(),
         PuppeteerModule.forRoot({
-            headless: true
+            args: ['--no-sandbox','--disable-setuid-sandbox']
         })
     ],
     providers: [
