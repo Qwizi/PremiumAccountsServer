@@ -48,7 +48,8 @@ export class ForumsService {
         try {
             const response = await this.httpService.get('https://epremki.com/misc.php?action=syndication', {
                 headers: {
-                    Cookie: `mybbuser=${process.env.MYBB_COOKIE};`
+                    Cookie: `mybbuser=${process.env.MYBB_COOKIE};`,
+                    UserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'
                 }
             }).toPromise()
             const htmlData = response.data;
