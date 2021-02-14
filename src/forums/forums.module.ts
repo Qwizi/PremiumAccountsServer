@@ -1,4 +1,4 @@
-import {HttpModule, Module} from '@nestjs/common';
+import {Module} from '@nestjs/common';
 import {ForumsService} from './forums.service';
 import {ForumsController} from './forums.controller';
 import {AuthModule} from "../auth/auth.module";
