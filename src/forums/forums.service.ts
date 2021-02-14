@@ -1,19 +1,22 @@
-import {HttpService, HttpStatus, Inject, Injectable, OnModuleInit} from '@nestjs/common';
-import {EPREMKI_RSS_URL, MYBB_COOKIE_OBJ} from "./forums.constants";
+import {Injectable} from '@nestjs/common';
+import {MYBB_COOKIE_OBJ} from "./forums.constants";
 import {Forum} from "./entities/forum.entitiy";
 import {CreateForumDto} from "./dto/createForumDto";
-import * as cheerio from 'cheerio';
 import {InjectRepository} from "@nestjs/typeorm";
 import {Repository} from "typeorm";
 import {InjectQueue} from "@nestjs/bull";
 import {Queue} from "bull";
+import {InjectBrowser} from "nest-puppeteer";
+import {Browser, Page} from "puppeteer";
+import {Logger} from "@nestjs/common";
 
 @Injectable()
 export class ForumsService {
+    private logger = new Logger("ForumsService");
     constructor(
         @InjectRepository(Forum) private forumsRepository: Repository<Forum>,
         @InjectQueue('forums') private forumsQueue: Queue,
-        private httpService: HttpService,
+        @InjectBrowser() private readonly browser: Browser,
     ) {}
 
     async save(forum: Forum) {
@@ -44,41 +47,62 @@ export class ForumsService {
         return this.forumsRepository.delete(forum.id);
     }
 
+    async getForumsOptions(page: Page) {
+        try {
+            const selector = "select[name='forums[]'] option";
+            await page.waitForSelector(selector);
+            let forumItems = [];
+            const ignoreForums = await this.getIgnoreForums();
+            return await page.evaluate(async (selector, forumItems, ignoreForums) => {
+                const forums = document.querySelectorAll(selector);
+                forums.forEach(forum => {
+                    if (!ignoreForums.includes(forum.value)) {
+                        const replacedForumName = forum.innerText.replace(/\s/g, '');
+                        forumItems.push({
+                            title: replacedForumName,
+                            fid: forum.value
+                        })
+                    }
+                })
+                return forumItems;
+            }, selector, forumItems, ignoreForums);
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
     async sync() {
         try {
-            const response = await this.httpService.get('https://epremki.com/misc.php?action=syndication', {
-                headers: {
-                    Cookie: `mybbuser=${process.env.MYBB_COOKIE};`,
-                    UserAgent: 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0'
-                }
-            }).toPromise()
-            const htmlData = response.data;
-            const $ = cheerio.load(htmlData);
+            const page = await this.browser.newPage();
+            this.logger.log("Otwarlem nowa karte");
 
-            let forumItems = []
-            const ignoreForums = await this.getIgnoreForums();
+            const epremki_url = 'https://epremki.com/misc.php?action=syndication';
+            await page.setCookie(MYBB_COOKIE_OBJ);
+            await page.goto(epremki_url);
+            this.logger.log(`Przeszedlem na strone ${await page.title()}`);
 
-            $("select[name='forums[]'] option").each(function(i, op) {
-                // @ts-ignore
-                const name = $(op).text();
-                const value = $(op).val();
-                if (!ignoreForums.includes(value)) {
-                    const replacedName = name.replace(/\s/g, '');
-                    const forum = {
-                        title: replacedName,
-                        fid: value
-                    }
-                    forumItems.push(forum);
-                }
-            });
-            for (let forum of forumItems) {
+            const forums = await this.getForumsOptions(page);
+            console.log(forums);
+            this.logger.log(`Ilosc pobranych for (${forums.length})`);
+            this.logger.log(JSON.stringify(forums));
+            await page.close();
+            this.logger.log("Zamknalem strone");
+            await this.browser.close();
+            this.logger.log("Zamknalem przegladarke");
+
+            this.logger.log("Zaczynam zapisywac fora do bazy");
+            for await (let forum of forums) {
                 if (!await this.forumsRepository.findOne({where: {fid: forum.fid, title: forum.title}})) {
                     const newForum = await this.forumsRepository.create({fid: forum.fid, title: forum.title});
                     await this.forumsRepository.save(newForum);
+                    this.logger.log(`Forum [${forum.title} | ${forum.fid}] zostalo zapisane w bazie`);
+                } else {
+                    this.logger.log(`Forum [${forum.title} | ${forum.fid}] juz istnieje w naszej bazie`);
                 }
             }
+            this.logger.log("Zakonczylem zapisywac fora w bazie");
         } catch (e) {
-            console.log(e)
+            this.logger.error(e.message);
         }
     }
 

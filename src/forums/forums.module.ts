@@ -7,12 +7,13 @@ import {TypeOrmModule} from "@nestjs/typeorm";
 import {Forum} from "./entities/forum.entitiy";
 import {BullModule} from "@nestjs/bull";
 import {ForumsProcessor} from "./forums.processor";
+import {PuppeteerModule} from "nest-puppeteer";
 
 @Module({
     imports: [
         ConfigModule.forRoot(),
         AuthModule,
-        HttpModule,
+        PuppeteerModule,
         BullModule.registerQueue({
             name: 'forums'
         }),

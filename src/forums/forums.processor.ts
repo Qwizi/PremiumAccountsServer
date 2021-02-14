@@ -10,16 +10,14 @@ export class ForumsProcessor {
 
     @OnQueueActive()
     onActive(job: Job) {
-        console.log(
-            `Processing job ${job.id} of type ${job.name} with data ${job.data}...`,
-        );
+        this.logger.log(`Rozpoczynam zadanie ${job.id}`);
     }
 
     @Process()
     async syncThreads(job: Job<unknown>) {
-        this.logger.log("Start sync forums")
+        this.logger.log("Rozpoczynam synchronizacje for")
         await this.forumsService.sync();
-        this.logger.log("End sync forums")
+        this.logger.log("Zakonczyłem synchronizacje for");
         return {}
     }
 }
