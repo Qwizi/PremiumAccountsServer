@@ -18,7 +18,7 @@ import {User} from "../users/entities/user.enitiy";
         BullModule.registerQueue({
             name: 'threads'
         }),
-        HttpModule,
+        //HttpModule,
         ForumsModule,
         ScheduleModule.forRoot(),
         PuppeteerModule.forRoot({

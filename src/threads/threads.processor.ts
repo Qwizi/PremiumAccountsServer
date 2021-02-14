@@ -8,18 +8,13 @@ export class ThreadsProcessor {
     private readonly logger = new Logger(ThreadsProcessor.name);
     constructor(private readonly threadsService: ThreadsService) {}
 
-    @OnQueueActive()
-    onActive(job: Job) {
-        console.log(
-            `Processing job ${job.id} of type ${job.name} with data ${job.data}...`,
-        );
-    }
-
     @Process()
     async syncThreads(job: Job<unknown>) {
-        this.logger.log("Job starting")
-        await this.threadsService.sync();
-        this.logger.log("Job ending")
+        await job.progress(10);
+        this.logger.log("Rozpoczynam synchornizacje tematow");
+        await this.threadsService.sync(job);
+        await job.progress(100);
+        this.logger.log("Zakonczylem synchornizacje tematow");
         return {}
     }
 }

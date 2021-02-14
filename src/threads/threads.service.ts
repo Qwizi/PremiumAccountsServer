@@ -1,11 +1,11 @@
-import {HttpException, HttpService, HttpStatus, Injectable, Logger, NotFoundException,} from '@nestjs/common';
+import {HttpException, HttpStatus, Injectable, Logger, NotFoundException,} from '@nestjs/common';
 import {Thread} from "./entities/thread.entity";
 import {CreateThreadDto} from "./dto/createThreadDto";
 import {ForumsService} from "../forums/forums.service";
 import {User} from "../users/entities/user.enitiy";
 import {Cron, CronExpression} from "@nestjs/schedule";
 import {InjectQueue} from "@nestjs/bull";
-import {Queue} from "bull";
+import {Job, Queue} from "bull";
 import {InjectRepository} from "@nestjs/typeorm";
 import {Like, Repository} from "typeorm";
 import {InjectBrowser} from "nest-puppeteer";
@@ -24,8 +24,7 @@ export class ThreadsService {
         @InjectRepository(Thread) private threadsRepository: Repository<Thread>,
         @InjectQueue('threads') private threadsQueue: Queue,
         @InjectBrowser() private readonly browser: Browser,
-        private forumsService: ForumsService,
-        private httpService: HttpService,
+        private forumsService: ForumsService
     ) {
     }
 
@@ -99,174 +98,6 @@ export class ThreadsService {
         })
     }
 
-    async getThreadContent(page: Page, url: string) {
-        await page.setCookie(MYBB_COOKIE_OBJ);
-        await page.goto(url);
-
-        try {
-            const thxInfoMsgSelectors = "div.info_thx.message";
-            await page.waitForSelector(thxInfoMsgSelectors)
-            return await page.evaluate((thxInfoMsgSelectors) => {
-                const msg = document.querySelector(thxInfoMsgSelectors);
-                return msg.textContent
-            }, thxInfoMsgSelectors)
-        } catch (e) {
-            const postBodySelectors = "div.post_body > div > div";
-            await page.waitForSelector(postBodySelectors)
-            return await page.evaluate((postBodySelectors) => {
-                const msg = document.querySelector(postBodySelectors);
-                return msg.textContent
-            }, postBodySelectors)
-        }
-    }
-
-    async createPages(currentUrls: Thread[]) {
-        for await (let url of currentUrls) {
-            // Otwieramy 5 nowych kart
-            await this.browser.newPage();
-        }
-        // Pobieramy otwarte karty
-        let pagesCreated = await this.browser.pages();
-        // Usuwaamy pierwsza karte, poniewaz przegladarka musi byc otwarta
-        pagesCreated.shift();
-
-        this.logger.debug(`Utworzonych stron ${pagesCreated.length}`)
-
-        for (let i = 0; i <= currentUrls.length; i++) {
-            try {
-                if (currentUrls.length >= pagesCreated.length) {
-                    const page = pagesCreated[i];
-                    if (page) {
-                        await pagesCreated[i].bringToFront();
-                        const thread = currentUrls[i];
-                        if (thread) {
-                            let content_html = await this.getThreadContent(pagesCreated[i], currentUrls[i].url);
-                            thread.is_visible = true;
-                            thread.content_html = content_html;
-                            await this.threadsRepository.save(thread);
-                            this.logger.debug(`Thread content ${thread.content_html}`)
-                        }
-
-                    }
-                    //await this.sleep(5000);
-                }
-            } catch (e) {
-                const page = pagesCreated[i];
-                if (page !== undefined) {
-                    await pagesCreated[i].close();
-                }
-            }
-        }
-
-        return pagesCreated;
-    }
-
-    async getThreadsToScrappContent(forum: Forum) {
-        let items = await this.threadsRepository.find({where: {forum: forum.id, content_html: '', is_visible: false}});
-        this.logger.debug(`(${forum.fid} - ${forum.title}) Ilosc: ${items.length}`);
-        return items;
-    }
-
-    async openPages() {
-        let forums = await this.forumsService.findAll();
-        for await (let forum of forums) {
-            let items = await this.getThreadsToScrappContent(forum);
-            if (items.length > 0) {
-                this.logger.debug(`${items.map(item => {
-                    return item.title
-                }).join(', \n')}`);
-                // Url ktore sa aktualne przetwarzane
-                let currentUrls = [];
-                this.logger.debug(`Itemy na poczatku ${items.length}, ${items.map(item => {
-                    return item.url
-                }).join(',')}`);
-                // Dopuki
-                while (items.length > 0) {
-                    if (items.length >= 15) {
-                        currentUrls = items.slice(Math.max(items.length - 15, 0))
-                        this.logger.debug(`CurrentUrls gdy jest wiecej niz 5. ${currentUrls.length}, ${currentUrls.map(item => {
-                            return item.url
-                        }).join(',')}`)
-
-                        const pagesCreated = await this.createPages(currentUrls);
-
-                        // Zaamykamy otwarte karty
-                        for await (let page of pagesCreated) {
-                            await page.close();
-                        }
-
-                        // usuwamy z listy itemow aktualne juz sprawdzone itemy
-                        items = items.filter(item => !currentUrls.includes(item))
-                        this.logger.debug(`Itemy po usunieciu ${items.length}, ${items.map(item => {
-                            return item.url
-                        }).join(',')}`)
-                    } else {
-                        // Sytuacja gdy pozostalych itemow jest mniej niz 5
-                        currentUrls = items;
-
-                        await this.createPages(currentUrls);
-
-                        const pagesCreated = await this.createPages(currentUrls);
-
-                        // Zaamykamy otwarte karty
-                        for await (let page of pagesCreated) {
-                            await page.close();
-                        }
-
-                        this.logger.debug(`CurrentUrls gdy jest mniej niz 5. ${currentUrls.length}, ${currentUrls.map(item => {
-                            return item.url
-                        }).join(',')}`)
-                        items = [];
-                        this.logger.debug(`Itemy po usunieciu ${items.length}, ${items.map(item => {
-                            return item.url
-                        }).join(',')}`)
-                    }
-                }
-            }
-        }
-    }
-
-    async createThreads(limit: number = 40) {
-        const forums = await this.forumsService.findAll();
-        for await (let forum of forums) {
-            try {
-                const response = await this.httpService.get(`
-https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, {
-                    headers: {
-                        Cookie: `mybbuser=${process.env.MYBB_COOKIE};`
-                    }
-                }).toPromise()
-                if (response.data.items.length > 0) {
-                    for await (let threadItem of response.data.items) {
-                        if (!await this.threadsRepository.findOne({where: {tid: threadItem.id}})) {
-                            const newThread = this.threadsRepository.create({
-                                tid: threadItem.id,
-                                url: threadItem.url,
-                                title: threadItem.title,
-                                //content_html: content_html,
-                                created_at: threadItem.date_published,
-                                updated_at: threadItem.date_modified,
-                                is_visible: false
-                            })
-
-                            await this.threadsRepository.save(newThread);
-
-                            const forumThreads = await forum.threads;
-                            forumThreads.push(newThread);
-
-                            await this.forumsService.save(forum);
-                            this.logger.debug(`Thread -> ${newThread.title}`);
-                        } else {
-                            this.logger.debug(`Thread[Exist] -> ${threadItem.title}`);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.log(e);
-            }
-        }
-    }
-
     async search(searchThreadDto: SearchThreadDto, options: IPaginationOptions): Promise<Pagination<Thread>> {
         return paginate<Thread>(this.threadsRepository, options, {
             where: {
@@ -280,7 +111,7 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
         })
     }
 
-    async sync(limit: number = 40) {
+    async sync(job: Job<unknown>, limit: number = 40) {
 
         const createPages = async (number: number) => {
             for (let i=0; i <= number; i++) {
@@ -367,18 +198,23 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
 
         const getThreadsWithoutContent = async (forum: Forum) => {
             let threads = await this.threadsRepository.find({where: {forum: forum.id, content_html: '', is_visible: false}});
-            this.logger.debug(`(${forum.fid} - ${forum.title}) Ilosc: ${threads.length}`);
+            this.logger.log(`(${forum.fid} - ${forum.title}) Ilosc: ${threads.length}`);
             return threads;
         }
 
         const fetchThreads = async (forum: Forum, limit: number) => {
-            const response = await this.httpService.get(`
-https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, {
-                headers: {
-                    Cookie: `mybbuser=${process.env.MYBB_COOKIE};`
-                }
-            }).toPromise()
-            return response.data.items;
+            const epremki_url = `https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`;
+            this.logger.log(`Zaczynam pobierac tematy z forum [${forum.title} | ${forum.fid}]`);
+            const page = await this.browser.newPage();
+            await page.setCookie(MYBB_COOKIE_OBJ);
+            await page.goto(epremki_url);
+            const response = await page.evaluate(() =>  {
+                return JSON.parse(document.querySelector("body").innerText);
+            });
+            this.logger.log(`Ilosc pobranych tematow (${response.items.length})`);
+            await page.close();
+            this.logger.log(`Zakonczylem pobieranie tematow z forum [${forum.title} | ${forum.fid}]`);
+            return response.items;
         }
 
         const createThread = async (createThreadDto: CreateThreadDto, forum: Forum) => {
@@ -398,7 +234,7 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
             forumThreads.push(newThread);
 
             await this.forumsService.save(forum);
-            this.logger.debug(`Thread[${newThread.title}]`);
+            this.logger.log(`Thread[${newThread.title}]`);
             return newThread;
         }
 
@@ -411,7 +247,6 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
         const createThreads = async (forums: Forum[], limit: number = 40) => {
             for await (let forum of forums) {
                 const threads = await fetchThreads(forum, limit);
-                this.logger.debug(`Temaatow -> ${threads.length}`);
                 if (threads.length > 0) {
                     for await (let thread of threads) {
                         if (!await this.threadsRepository.findOne({where: {tid: thread.id}})) {
@@ -428,10 +263,10 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                             await page.bringToFront();
                             let content_html = await getThreadContent(page, newThread.url);
                             await updateThreadContent(newThread, content_html);
-                            this.logger.debug(`Thread[${thread.title}] -> ${content_html}`)
+                            this.logger.log(`Temat [${thread.title} | ${content_html}] zostal stworzony`)
                             await page.close();
                         } else {
-                            this.logger.debug(`Thread[${thread.title}] -> Exists`)
+                            this.logger.log(`Temat [${thread.title}] juz istnieje w naszej bazie`)
                         }
                     }
                 }
@@ -459,16 +294,17 @@ https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`, 
                 }
             }
         }
+        try {
+            const forums = await this.forumsService.findAll();
+            this.logger.log(`Ilosc dostepnych for (${forums.length})`);
+            await job.progress(50);
 
-        const forums = await this.forumsService.findAll();
-
-        if (forums.length > 0) {
-            await createThreads(forums, limit);
-            //await openPages(forums);
+            if (forums.length > 0) {
+                await createThreads(forums, limit);
+            }
+        } catch (e) {
+            this.logger.error(e.message);
         }
-
-        //await this.createThreads(limit);
-        //await this.openPages();
     }
 
     @Cron(CronExpression.EVERY_2_HOURS)
