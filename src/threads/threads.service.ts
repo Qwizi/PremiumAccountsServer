@@ -216,7 +216,7 @@ export class ThreadsService {
                 this.logger.log(`Zaczynam pobierac tematy z forum [${forum.title} | ${forum.fid}]`);
                 const p = await this.browser.newPage();
                 const page = await openPageWithProxy(p, epremki_url);
-                await page.goto(epremki_url);
+                //await page.goto(epremki_url);
                 const response = await page.evaluate(() => {
                     return JSON.parse(document.querySelector("body").innerText);
                 });
