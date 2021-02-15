@@ -14,7 +14,12 @@ import {PuppeteerModule} from "nest-puppeteer";
         ConfigModule.forRoot(),
         AuthModule,
         PuppeteerModule.forRoot({
-            headless: false
+            headless: true,
+            defaultViewport: null,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+            ]
         }),
         BullModule.registerQueue({
             name: 'forums'
