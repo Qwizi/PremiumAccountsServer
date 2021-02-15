@@ -9,15 +9,18 @@ import {Queue} from "bull";
 import {InjectBrowser} from "nest-puppeteer";
 import {Browser, Page} from "puppeteer";
 import {Logger} from "@nestjs/common";
+import {openPageWithProxy} from "../app.uitils";
 
 @Injectable()
 export class ForumsService {
     private logger = new Logger("ForumsService");
+
     constructor(
         @InjectRepository(Forum) private forumsRepository: Repository<Forum>,
         @InjectQueue('forums') private forumsQueue: Queue,
         @InjectBrowser() private readonly browser: Browser,
-    ) {}
+    ) {
+    }
 
     async save(forum: Forum) {
         return this.forumsRepository.save(forum);
@@ -30,7 +33,7 @@ export class ForumsService {
     }
 
     async findAll(options?: object): Promise<Forum[]> {
-        return options !== null ? this.forumsRepository.find(options): this.forumsRepository.find();
+        return options !== null ? this.forumsRepository.find(options) : this.forumsRepository.find();
     }
 
     async findOne(options: object): Promise<Forum> {
@@ -73,22 +76,16 @@ export class ForumsService {
 
     async sync() {
         try {
-            const page = await this.browser.newPage();
-            this.logger.log("Otwarlem nowa karte");
+            const epremkiUrl = 'https://epremki.com/misc.php?action=syndication';
+            const p = await this.browser.newPage();
+            const page = await openPageWithProxy(p, epremkiUrl);
 
-            const epremki_url = 'https://epremki.com/misc.php?action=syndication';
-            await page.setCookie(MYBB_COOKIE_OBJ);
-            await page.goto(epremki_url);
-            this.logger.log(`Przeszedlem na strone ${await page.title()}`);
+            this.logger.log("Otwarlem nowa karte");
 
             const forums = await this.getForumsOptions(page);
             console.log(forums);
             this.logger.log(`Ilosc pobranych for (${forums.length})`);
             this.logger.log(JSON.stringify(forums));
-            await page.close();
-            this.logger.log("Zamknalem strone");
-            await this.browser.close();
-            this.logger.log("Zamknalem przegladarke");
 
             this.logger.log("Zaczynam zapisywac fora do bazy");
             for await (let forum of forums) {
@@ -100,6 +97,7 @@ export class ForumsService {
                     this.logger.log(`Forum [${forum.title} | ${forum.fid}] juz istnieje w naszej bazie`);
                 }
             }
+            await page.close();
             this.logger.log("Zakonczylem zapisywac fora w bazie");
         } catch (e) {
             this.logger.error(e.message);

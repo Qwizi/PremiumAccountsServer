@@ -13,7 +13,9 @@ import {PuppeteerModule} from "nest-puppeteer";
     imports: [
         ConfigModule.forRoot(),
         AuthModule,
-        PuppeteerModule,
+        PuppeteerModule.forRoot({
+            headless: false
+        }),
         BullModule.registerQueue({
             name: 'forums'
         }),
