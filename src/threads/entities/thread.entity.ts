@@ -24,7 +24,7 @@ export class Thread {
     @Column()
     title: string;
 
-    @Column()
+    @Column({default: ''})
     content_html: string;
 
     @Column({default: true})
