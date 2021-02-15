@@ -13,14 +13,7 @@ import {PuppeteerModule} from "nest-puppeteer";
     imports: [
         ConfigModule.forRoot(),
         AuthModule,
-        PuppeteerModule.forRoot({
-            headless: true,
-            defaultViewport: null,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-            ]
-        }),
+        PuppeteerModule.forRoot(),
         BullModule.registerQueue({
             name: 'forums'
         }),

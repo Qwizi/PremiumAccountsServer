@@ -21,14 +21,7 @@ import {User} from "../users/entities/user.enitiy";
         //HttpModule,
         ForumsModule,
         ScheduleModule.forRoot(),
-        PuppeteerModule.forRoot({
-            headless: true,
-            defaultViewport: null,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-            ]
-        })
+        PuppeteerModule.forRoot()
     ],
     providers: [
         ThreadsService,
