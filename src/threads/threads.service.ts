@@ -12,7 +12,7 @@ import {InjectBrowser} from "nest-puppeteer";
 import {Browser, Page} from "puppeteer";
 import {MYBB_COOKIE_OBJ} from "../forums/forums.constants";
 import {Forum} from "../forums/entities/forum.entitiy";
-import {handle} from "../app.uitils";
+import {handle, openPageWithProxy} from "../app.uitils";
 import {SearchThreadDto} from "./dto/searchThreadDto";
 import {IPaginationOptions, paginate, Pagination} from "nestjs-typeorm-paginate";
 
@@ -179,17 +179,19 @@ export class ThreadsService {
         const getThreadContent = async (page: Page, url: string) => {
             try {
                 const selector = "div.info_thx.message";
-                await page.setCookie(MYBB_COOKIE_OBJ);
-                await page.goto(url);
-                await page.waitForSelector(selector, {timeout: 5000});
-                return getMessageFromPost(page, "div.info_thx.message");
+                const p = await openPageWithProxy(page, url);
+                //await p.setCookie(MYBB_COOKIE_OBJ);
+                //await p.goto(url);
+                await p.waitForSelector(selector, {timeout: 5000});
+                return getMessageFromPost(p, "div.info_thx.message");
             } catch (e) {
                 try {
                     const selector = "div.post_body > div > div";
-                    await page.setCookie(MYBB_COOKIE_OBJ);
-                    await page.goto(url);
-                    await page.waitForSelector(selector, {timeout: 5000});
-                    return getMessageFromPost(page, "div.post_body > div > div");
+                    //await p.setCookie(MYBB_COOKIE_OBJ);
+                    //await p.goto(url);
+                    const p = await openPageWithProxy(page, url);
+                    await p.waitForSelector(selector, {timeout: 5000});
+                    return getMessageFromPost(p, "div.post_body > div > div");
                 } catch (e) {
                     this.logger.debug(`Selector not found`)
                 }
@@ -205,8 +207,8 @@ export class ThreadsService {
         const fetchThreads = async (forum: Forum, limit: number) => {
             const epremki_url = `https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`;
             this.logger.log(`Zaczynam pobierac tematy z forum [${forum.title} | ${forum.fid}]`);
-            const page = await this.browser.newPage();
-            await page.setCookie(MYBB_COOKIE_OBJ);
+            const p = await this.browser.newPage();
+            const page = await openPageWithProxy(p, epremki_url);
             await page.goto(epremki_url);
             const response = await page.evaluate(() =>  {
                 return JSON.parse(document.querySelector("body").innerText);
