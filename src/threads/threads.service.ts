@@ -114,7 +114,7 @@ export class ThreadsService {
     async sync(job: Job<unknown>, limit: number = 40) {
 
         const createPages = async (number: number) => {
-            for (let i=0; i <= number; i++) {
+            for (let i = 0; i <= number; i++) {
                 await this.browser.newPage();
             }
         }
@@ -199,45 +199,58 @@ export class ThreadsService {
         }
 
         const getThreadsWithoutContent = async (forum: Forum) => {
-            let threads = await this.threadsRepository.find({where: {forum: forum.id, content_html: '', is_visible: false}});
+            let threads = await this.threadsRepository.find({
+                where: {
+                    forum: forum.id,
+                    content_html: '',
+                    is_visible: false
+                }
+            });
             this.logger.log(`(${forum.fid} - ${forum.title}) Ilosc: ${threads.length}`);
             return threads;
         }
 
         const fetchThreads = async (forum: Forum, limit: number) => {
-            const epremki_url = `https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`;
-            this.logger.log(`Zaczynam pobierac tematy z forum [${forum.title} | ${forum.fid}]`);
-            const p = await this.browser.newPage();
-            const page = await openPageWithProxy(p, epremki_url);
-            await page.goto(epremki_url);
-            const response = await page.evaluate(() =>  {
-                return JSON.parse(document.querySelector("body").innerText);
-            });
-            this.logger.log(`Ilosc pobranych tematow (${response.items.length})`);
-            await page.close();
-            this.logger.log(`Zakonczylem pobieranie tematow z forum [${forum.title} | ${forum.fid}]`);
-            return response.items;
+            try {
+                const epremki_url = `https://epremki.com/syndication.php?fid=${forum.fid}&type=json&limit=${limit}`;
+                this.logger.log(`Zaczynam pobierac tematy z forum [${forum.title} | ${forum.fid}]`);
+                const p = await this.browser.newPage();
+                const page = await openPageWithProxy(p, epremki_url);
+                await page.goto(epremki_url);
+                const response = await page.evaluate(() => {
+                    return JSON.parse(document.querySelector("body").innerText);
+                });
+                this.logger.log(`Ilosc pobranych tematow (${response.items.length})`);
+                await page.close();
+                this.logger.log(`Zakonczylem pobieranie tematow z forum [${forum.title} | ${forum.fid}]`);
+                return response.items;
+            } catch (e) {
+                this.logger.error(e.message)
+            }
         }
 
         const createThread = async (createThreadDto: CreateThreadDto, forum: Forum) => {
-            const newThread = this.threadsRepository.create({
-                tid: createThreadDto.tid,
-                url: createThreadDto.url,
-                title: createThreadDto.title,
-                //content_html: content_html,
-                created_at: createThreadDto.created_at,
-                updated_at: createThreadDto.updated_at,
-                is_visible: false
-            })
+            try {
+                const newThread = this.threadsRepository.create({
+                    tid: createThreadDto.tid,
+                    url: createThreadDto.url,
+                    title: createThreadDto.title,
+                    //content_html: content_html,
+                    created_at: createThreadDto.created_at,
+                    updated_at: createThreadDto.updated_at,
+                    is_visible: false
+                })
 
-            await this.threadsRepository.save(newThread);
+                await this.threadsRepository.save(newThread);
 
-            const forumThreads = await forum.threads;
-            forumThreads.push(newThread);
+                const forumThreads = await forum.threads;
+                forumThreads.push(newThread);
 
-            await this.forumsService.save(forum);
-            this.logger.log(`Thread[${newThread.title}]`);
-            return newThread;
+                await this.forumsService.save(forum);
+                return newThread;
+            } catch (e) {
+                this.logger.error(e.message);
+            }
         }
 
         const updateThreadContent = async (thread, content_html: string) => {
@@ -247,31 +260,35 @@ export class ThreadsService {
         }
 
         const createThreads = async (forums: Forum[], limit: number = 40) => {
-            for await (let forum of forums) {
-                const threads = await fetchThreads(forum, limit);
-                if (threads.length > 0) {
-                    for await (let thread of threads) {
-                        if (!await this.threadsRepository.findOne({where: {tid: thread.id}})) {
-                            const newThread = await createThread({
-                                tid: thread.id,
-                                url: thread.url,
-                                title: thread.title,
-                                //content_html: content_html,
-                                created_at: thread.created_at,
-                                updated_at: thread.updated_at,
-                                is_visible: false
-                            }, forum)
-                            const page = await this.browser.newPage();
-                            await page.bringToFront();
-                            let content_html = await getThreadContent(page, newThread.url);
-                            await updateThreadContent(newThread, content_html);
-                            this.logger.log(`Temat [${thread.title} | ${content_html}] zostal stworzony`)
-                            await page.close();
-                        } else {
-                            this.logger.log(`Temat [${thread.title}] juz istnieje w naszej bazie`)
+            try {
+                for await (let forum of forums) {
+                    const threads = await fetchThreads(forum, limit);
+                    if (threads.length > 0) {
+                        for await (let thread of threads) {
+                            if (!await this.threadsRepository.findOne({where: {tid: thread.id}})) {
+                                const newThread = await createThread({
+                                    tid: thread.id,
+                                    url: thread.url,
+                                    title: thread.title,
+                                    //content_html: content_html,
+                                    created_at: thread.created_at,
+                                    updated_at: thread.updated_at,
+                                    is_visible: false
+                                }, forum)
+                                const page = await this.browser.newPage();
+                                await page.bringToFront();
+                                let content_html = await getThreadContent(page, newThread.url);
+                                await updateThreadContent(newThread, content_html);
+                                this.logger.log(`Temat [${thread.title} | ${content_html}] zostal stworzony`)
+                                await page.close();
+                            } else {
+                                this.logger.log(`Temat [${thread.title}] juz istnieje w naszej bazie`)
+                            }
                         }
                     }
                 }
+            } catch (e) {
+                this.logger.error(e.message);
             }
         }
 
@@ -280,7 +297,7 @@ export class ThreadsService {
                 let threads = await getThreadsWithoutContent(forum);
                 if (threads.length > 0) {
                     let currentThreads = [];
-                    while(threads.length > 0) {
+                    while (threads.length > 0) {
                         if (threads.length >= 15) {
                             currentThreads = await getCurrentActionThreads(threads);
                             await createPages(currentThreads.length);
