@@ -221,8 +221,8 @@ export class ThreadsService {
                     return JSON.parse(document.querySelector("body").innerText);
                 });
                 this.logger.log(`Ilosc pobranych tematow (${response.items.length})`);
-                await page.close();
                 this.logger.log(`Zakonczylem pobieranie tematow z forum [${forum.title} | ${forum.fid}]`);
+                await page.close();
                 return response.items;
             } catch (e) {
                 this.logger.error(e.message)
